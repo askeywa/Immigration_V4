@@ -1,0 +1,121 @@
+/**
+ * Self-Hosted Fonts with Google Fonts Fallback
+ * Industry Standard: WOFF2 (modern browsers) + WOFF (legacy) + Google CDN (emergency fallback)
+ * 
+ * Font Loading Strategy:
+ * 1. Try to load from local system font (instant, if user has it installed)
+ * 2. Load from self-hosted files (/fonts/ directory)
+ * 3. Fallback to Google Fonts CDN (defined in index.html)
+ * 4. Ultimate fallback to system fonts (defined in font-family stack)
+ */
+
+/* ============================================================================
+   INTER FONT FAMILY (Body Text)
+   Used for: Body text, UI components, general content
+   Weights: 400 (Regular), 600 (Semi-Bold), 700 (Bold)
+   ========================================================================= */
+
+/* Inter Regular (400) */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap; /* Shows fallback font immediately, swaps when Inter loads */
+  src: 
+    /* Try to use locally installed font first (fastest) */
+    local('Inter Regular'),
+    local('Inter-Regular'),
+    /* Self-hosted fonts (your server) */
+    url('/fonts/inter/inter-latin-400-normal.woff2') format('woff2'),
+    url('/fonts/inter/inter-latin-400-normal.woff') format('woff');
+  /* Latin character set (covers English and most Western languages) */
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Inter Semi-Bold (600) */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: 
+    local('Inter SemiBold'),
+    local('Inter-SemiBold'),
+    url('/fonts/inter/inter-latin-600-normal.woff2') format('woff2'),
+    url('/fonts/inter/inter-latin-600-normal.woff') format('woff');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Inter Bold (700) */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: 
+    local('Inter Bold'),
+    local('Inter-Bold'),
+    url('/fonts/inter/inter-latin-700-normal.woff2') format('woff2'),
+    url('/fonts/inter/inter-latin-700-normal.woff') format('woff');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================================
+   NUNITO FONT FAMILY (Headings)
+   Used for: Headings (h1-h6), emphasis text, branding
+   Weights: 400 (Regular), 600 (Semi-Bold), 700 (Bold)
+   ========================================================================= */
+
+/* Nunito Regular (400) */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: 
+    local('Nunito Regular'),
+    local('Nunito-Regular'),
+    url('/fonts/nunito/nunito-latin-400-normal.woff2') format('woff2'),
+    url('/fonts/nunito/nunito-latin-400-normal.woff') format('woff');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Nunito Semi-Bold (600) */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: 
+    local('Nunito SemiBold'),
+    local('Nunito-SemiBold'),
+    url('/fonts/nunito/nunito-latin-600-normal.woff2') format('woff2'),
+    url('/fonts/nunito/nunito-latin-600-normal.woff') format('woff');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* Nunito Bold (700) */
+@font-face {
+  font-family: 'Nunito';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: 
+    local('Nunito Bold'),
+    local('Nunito-Bold'),
+    url('/fonts/nunito/nunito-latin-700-normal.woff2') format('woff2'),
+    url('/fonts/nunito/nunito-latin-700-normal.woff') format('woff');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ============================================================================
+   FONT PRELOADING HINTS
+   
+   For best performance, add these to index.html <head>:
+   
+   <link rel="preload" href="/fonts/inter/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+   <link rel="preload" href="/fonts/nunito/nunito-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+   
+   Note: Only preload the 1-2 most critical font files to avoid slowing initial page load
+   ========================================================================= */
+

@@ -1,0 +1,14 @@
+
+> src\server.ts:277:      logger.warn('⚠️  Redis Service initialization failed (using in-memory fallback)', {
+> src\features\auth\auth.controller.ts:191:      logger.error('Token refresh controller error:', error);
+> src\features\auth\auth.service.ts:477:      logger.info('Token refreshed successfully', { 
+> src\features\auth\auth.service.ts:485:      logger.error('Token refresh failed', { 
+> src\middleware\data-isolation.middleware.ts:71:      logger.error('Missing tenantId for protected endpoint', {
+> src\middleware\data-isolation.middleware.ts:201:        logger.error('Missing tenantId for authenticated request', {
+> src\middleware\security-hardening.middleware.ts:31:      logger.warn('CSRF token validation failed', {
+> src\middleware\security-hardening.middleware.ts:332:      logger.error('Missing tenantId for authenticated request', {
+> src\routes\client.routes.ts:263:      logger.error('Change client password failed', { 
+> src\services\audit-logging.service.ts:85:      logger.warn('⚠️ Bull queue initialization failed, using direct save fallback', {
+> src\services\audit-logging.service.ts:242:      logger.error('Audit log processing failed', {
+> src\services\redis.service.ts:85:        logger.warn('Redis unavailable - Using in-memory fallback for localhost', {
+

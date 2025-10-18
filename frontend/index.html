@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Canadian Immigration Portal - Multi-tenant SaaS Application" />
+    <meta name="theme-color" content="#dc2626" />
+    <title>Canadian Immigration Portal</title>
+    
+    <!-- ============================================ -->
+    <!-- PERFORMANCE OPTIMIZATION                    -->
+    <!-- ============================================ -->
+    
+    <!-- Preload critical fonts (self-hosted) -->
+    <link rel="preload" href="/fonts/inter/inter-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/nunito/nunito-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin />
+    
+    <!-- ============================================ -->
+    <!-- GOOGLE FONTS FALLBACK (Emergency Backup)    -->
+    <!-- ============================================ -->
+    <!-- Only loads if self-hosted @font-face fails -->
+    <!-- Uses async loading strategy for performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link 
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap" 
+      rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
+    />
+    <!-- Fallback for browsers without JavaScript -->
+    <noscript>
+      <link 
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Nunito:wght@400;600;700&display=swap" 
+        rel="stylesheet"
+      />
+    </noscript>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

@@ -1,0 +1,174 @@
+/**
+ * Unified Theme CSS (Based on Dashboard Design Rulebook)
+ * Single theme for all dashboards and pages
+ */
+
+/* Import self-hosted fonts with custom @font-face declarations */
+@import './styles/fonts.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    border-color: theme('colors.gray.200');
+  }
+  
+  body {
+    @apply bg-neutral-50 text-gray-800;
+    /* Use Inter for body text with system fonts as fallback */
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    line-height: 1.625; /* leading-relaxed */
+  }
+  
+  /* Use Inter for headings with system fonts as fallback */
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+    font-weight: 600; /* font-semibold */
+  }
+}
+
+@layer components {
+  /* ============================================
+     RULEBOOK COMPONENT STYLES
+     ============================================ */
+  
+  /* Page Background */
+  .page-background {
+    @apply bg-neutral-50;
+  }
+  
+  /* Cards & Containers */
+  .card {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm;
+  }
+  
+  .card-metric {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm p-6 hover:shadow-md transition-shadow duration-300;
+  }
+  
+  .card-data {
+    @apply bg-white border border-gray-200 rounded-lg shadow-sm p-6;
+  }
+  
+  /* Buttons */
+  .btn-primary {
+    @apply bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2.5 rounded-lg transition-all duration-300 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold px-6 py-2.5 rounded-lg transition-all duration-300 border border-gray-200;
+  }
+  
+  .btn-icon {
+    @apply p-2 rounded-md text-gray-600 hover:text-primary-600 hover:bg-primary-50 transition-colors duration-200;
+  }
+  
+  /* Tables */
+  .table-header {
+    @apply bg-gray-50 border-b border-gray-200;
+  }
+  
+  .table-row {
+    @apply hover:bg-gray-50 transition-colors duration-200;
+  }
+  
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+  }
+  
+  /* Forms */
+  .input-field {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200;
+  }
+  
+  .input-label {
+    @apply block text-sm font-semibold text-gray-800 mb-2;
+  }
+  
+  /* Navigation */
+  .nav-item {
+    @apply text-sm font-medium text-gray-600 hover:text-primary-600 transition-colors duration-200;
+  }
+  
+  .nav-item-active {
+    @apply text-sm font-medium text-primary-600 bg-primary-50 border-r-2 border-primary-600;
+  }
+  
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  
+  .badge-success {
+    @apply bg-success-100 text-success-800;
+  }
+  
+  .badge-warning {
+    @apply bg-warning-100 text-warning-800;
+  }
+  
+  .badge-error {
+    @apply bg-error-100 text-error-800;
+  }
+  
+  .badge-primary {
+    @apply bg-primary-100 text-primary-800;
+  }
+  
+  .badge-secondary {
+    @apply bg-secondary-100 text-secondary-800;
+  }
+  
+  /* Alerts */
+  .alert {
+    @apply p-4 rounded-lg border;
+  }
+  
+  .alert-success {
+    @apply bg-success-50 border-success-200 text-success-800;
+  }
+  
+  .alert-warning {
+    @apply bg-warning-50 border-warning-200 text-warning-800;
+  }
+  
+  .alert-error {
+    @apply bg-error-50 border-error-200 text-error-800;
+  }
+  
+  .alert-info {
+    @apply bg-blue-50 border-blue-200 text-blue-800;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  /* Rulebook Typography Scale */
+  .text-page-title {
+    @apply text-3xl font-bold text-gray-800;
+  }
+  
+  .text-section-title {
+    @apply text-lg font-semibold text-gray-800;
+  }
+  
+  .text-body {
+    @apply text-sm font-normal text-gray-600;
+  }
+  
+  .text-small {
+    @apply text-xs font-normal text-gray-500;
+  }
+  
+  .text-button {
+    @apply text-sm font-semibold;
+  }
+}

@@ -1,0 +1,61 @@
+# Environment variables
+.env
+.env.*
+*.env
+
+# Markdown files
+*.md
+
+# Test files
+*test*.js
+*test*.ts
+*test*.tsx
+*test*.jsx
+*.spec.js
+*.spec.ts
+*.spec.tsx
+*.spec.jsx
+*.test.js
+*.test.ts
+*.test.tsx
+*.test.jsx
+
+# PNG images
+*.png
+
+# Rules files and folders
+*rule*
+*rules*
+*Rule*
+*Rules*
+_Rules/
+_rules/
+
+# Screenshots
+screenshots/
+screenshot/
+
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
