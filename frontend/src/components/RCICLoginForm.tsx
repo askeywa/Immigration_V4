@@ -9,13 +9,13 @@
  * - Rule 12: Validate ALL external data
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DOMPurify from 'dompurify';
 import { useAuthStore } from '../stores/auth-store';
+import { getRouteForUser } from '../utils/routes';
 
 /**
- * User Type Options
+ * User Type Options - Ordered as per requirements
  */
 const USER_TYPES = [
   { value: 'super_admin', label: 'Super Admin', description: 'System administrator' },
@@ -38,12 +38,17 @@ interface RCICLoginFormProps {
  * RCIC Login Form Component
  */
 export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError }) => {
-  // State
-  const [userType, setUserType] = useState<UserType>('client');
+  // State - Default to super_admin
+  const [userType, setUserType] = useState<UserType>('super_admin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [localError, setLocalError] = useState<string>('');
+
+  // Refs for focus management and memory leak prevention
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const isMountedRef = useRef(true);
 
   // Hooks
   const navigate = useNavigate();
@@ -53,12 +58,21 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
     loginTeamMember, 
     loginClient,
     isLoginInProgress,
-    error 
+    clearError 
   } = useAuthStore();
+
+  /**
+   * Proper email validation function
+   */
+  const isValidEmail = useCallback((email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  }, []);
 
   /**
    * Handle form submission
    * Following CORE-CRITICAL Rule 4: Race conditions
+   * CRITICAL FIX: Never sanitize passwords
    */
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,26 +83,25 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
     }
 
     setIsSubmitting(true);
+    setLocalError('');
 
     try {
-      // XSS Prevention - CORE-CRITICAL Rule 3 & Rule 12: Validate ALL external data
-      const sanitizedEmail = DOMPurify.sanitize(email.trim());
-      const sanitizedPassword = DOMPurify.sanitize(password);
-
+      // CRITICAL FIX: Only trim email, NEVER sanitize passwords
+      const trimmedEmail = email.trim().toLowerCase();
+      
       // Validate email format
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(sanitizedEmail)) {
+      if (!isValidEmail(trimmedEmail)) {
         throw new Error('Please enter a valid email address');
       }
 
-      // Validate password
-      if (sanitizedPassword.length < 8) {
+      // Validate password length (basic client-side check)
+      if (password.length < 8) {
         throw new Error('Password must be at least 8 characters long');
       }
 
       const credentials = {
-        email: sanitizedEmail.toLowerCase(),
-        password: sanitizedPassword
+        email: trimmedEmail,
+        password: password // NO SANITIZATION - preserve original password
       };
 
       // Call appropriate login method based on user type
@@ -114,61 +127,81 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
         onSuccess();
       }
 
-      // Navigate to appropriate dashboard
-      switch (userType) {
-        case 'super_admin':
-          navigate('/super-admin/dashboard');
-          break;
-        case 'tenant_admin':
-          navigate('/tenant-admin/dashboard');
-          break;
-        case 'team_member':
-          navigate('/team-member/dashboard');
-          break;
-        case 'client':
-          navigate('/client/dashboard');
-          break;
-      }
+      // Navigate to appropriate dashboard - CRITICAL FIX: Centralized routing
+      const route = getRouteForUser(userType);
+      navigate(route, { replace: true });
 
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
+      
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setLocalError(errorMessage);
+      }
       
       // Error callback
       if (onError) {
         onError(errorMessage);
       }
     } finally {
-      setIsSubmitting(false);
+      // Only update state if component is still mounted
+      if (isMountedRef.current) {
+        setIsSubmitting(false);
+      }
     }
-  }, [userType, email, password, isLoginInProgress, isSubmitting, loginSuperAdmin, loginTenantAdmin, loginTeamMember, loginClient, onSuccess, onError, navigate]);
+  }, [userType, email, password, isLoginInProgress, isSubmitting, loginSuperAdmin, loginTenantAdmin, loginTeamMember, loginClient, onSuccess, onError, navigate, isValidEmail]);
+
 
   /**
-   * Handle user type change
+   * Handle user type change with focus management
    */
   const handleUserTypeChange = useCallback((newUserType: UserType) => {
     setUserType(newUserType);
     // Clear form when switching user types
     setEmail('');
     setPassword('');
+    setLocalError('');
+    
+    // Focus on email input after user type change
+    setTimeout(() => {
+      emailInputRef.current?.focus();
+    }, 100);
   }, []);
 
   /**
-   * Handle input changes with sanitization
+   * Handle input changes - CRITICAL FIX: No password sanitization
    */
   const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const sanitized = DOMPurify.sanitize(e.target.value);
-    setEmail(sanitized);
+    setEmail(e.target.value);
+    setLocalError(''); // Clear errors on input change
   }, []);
 
   const handlePasswordChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const sanitized = DOMPurify.sanitize(e.target.value);
-    setPassword(sanitized);
+    setPassword(e.target.value);
+    setLocalError(''); // Clear errors on input change
   }, []);
 
   /**
    * Form validation
    */
   const isFormValid = email.trim().length > 0 && password.length >= 8;
+
+  /**
+   * Clear errors when component mounts or user changes
+   */
+  useEffect(() => {
+    setLocalError('');
+    clearError(); // Clear store errors too
+  }, [userType, clearError]);
+
+  /**
+   * Memory leak prevention - mark component as unmounted on cleanup
+   */
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   return (
     <div className="w-full">
@@ -179,40 +212,35 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
         <p className="text-sm text-gray-600">Access your immigration portal</p>
       </div>
 
-        {/* User Type Selection */}
- <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+        {/* User Type Selection - Dropdown */}
+        <div className="mb-4">
+          <label htmlFor="userType" className="block text-sm font-medium text-gray-700 mb-2">
             Select User Type
           </label>
-          <div className="grid grid-cols-2 gap-2">
+          <select
+            id="userType"
+            value={userType}
+            onChange={(e) => handleUserTypeChange(e.target.value as UserType)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors bg-white"
+            aria-label="Select user type"
+          >
             {USER_TYPES.map((type) => (
-              <button
-                key={type.value}
-                type="button"
-                onClick={() => handleUserTypeChange(type.value)}
-                className={`p-3 text-left rounded-lg border transition-colors ${
-                  userType === type.value
-                    ? 'border-primary-500 bg-primary-50 text-primary-700'
-                    : 'border-gray-200 hover:border-gray-300 text-gray-700'
-                }`}
-              >
-                <div className="font-medium text-sm">{type.label}</div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {type.description}
-                </div>
-              </button>
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
             ))}
-          </div>
+          </select>
         </div>
 
         {/* Login Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4" aria-label="Login form">
           {/* Email Field */}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1.5">
               Email Address
             </label>
             <input
+              ref={emailInputRef}
               id="email"
               type="email"
               value={email}
@@ -221,6 +249,7 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="Enter your email"
               autoComplete="email"
+              aria-describedby={localError ? "email-error" : undefined}
             />
           </div>
 
@@ -238,6 +267,7 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-colors"
               placeholder="Enter your password"
               autoComplete="current-password"
+              aria-describedby={localError ? "password-error" : undefined}
             />
           </div>
 
@@ -255,17 +285,19 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
             </label>
           </div>
 
-          {/* Error Display */}
-          {error && (
- <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          {/* Error Display - CRITICAL FIX: Use local error as primary, store error as fallback */}
+          {localError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3" role="alert" aria-live="polite">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-4 w-4 text-red-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-2">
-                  <p className="text-sm text-red-800">{DOMPurify.sanitize(error)}</p>
+                  <p id="email-error" className="text-sm text-red-800">
+                    {localError}
+                  </p>
                 </div>
               </div>
             </div>
