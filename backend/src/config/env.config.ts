@@ -36,6 +36,16 @@ interface EnvConfig {
   LOG_MAX_SIZE: string;
   LOG_MAX_FILES: number;
   REQUIRE_AUDIT_QUEUE: string;
+  
+  // Login Attempt Limits
+  SUPER_ADMIN_MAX_LOGIN_ATTEMPTS: number;
+  SUPER_ADMIN_LOCKOUT_DURATION_MS: number;
+  TENANT_ADMIN_MAX_LOGIN_ATTEMPTS: number;
+  TENANT_ADMIN_LOCKOUT_DURATION_MS: number;
+  TEAM_MEMBER_MAX_LOGIN_ATTEMPTS: number;
+  TEAM_MEMBER_LOCKOUT_DURATION_MS: number;
+  CLIENT_MAX_LOGIN_ATTEMPTS: number;
+  CLIENT_LOCKOUT_DURATION_MS: number;
 }
 
 const getEnvVar = (key: string, defaultValue?: string): string => {
@@ -126,6 +136,18 @@ export const config: EnvConfig = {
   // Set to 'true' in production to enforce Redis-backed audit queue
   // Set to 'false' in development to allow in-memory fallback
   REQUIRE_AUDIT_QUEUE: getEnvVar('REQUIRE_AUDIT_QUEUE', 'false'),
+  
+  // Login Attempt Limits
+  // Development: 30 attempts in 1 minute
+  // Production: 3 attempts in 30 minutes (override in production .env)
+  SUPER_ADMIN_MAX_LOGIN_ATTEMPTS: getEnvNumber('SUPER_ADMIN_MAX_LOGIN_ATTEMPTS', 30),
+  SUPER_ADMIN_LOCKOUT_DURATION_MS: getEnvNumber('SUPER_ADMIN_LOCKOUT_DURATION_MS', 60000),
+  TENANT_ADMIN_MAX_LOGIN_ATTEMPTS: getEnvNumber('TENANT_ADMIN_MAX_LOGIN_ATTEMPTS', 30),
+  TENANT_ADMIN_LOCKOUT_DURATION_MS: getEnvNumber('TENANT_ADMIN_LOCKOUT_DURATION_MS', 60000),
+  TEAM_MEMBER_MAX_LOGIN_ATTEMPTS: getEnvNumber('TEAM_MEMBER_MAX_LOGIN_ATTEMPTS', 30),
+  TEAM_MEMBER_LOCKOUT_DURATION_MS: getEnvNumber('TEAM_MEMBER_LOCKOUT_DURATION_MS', 60000),
+  CLIENT_MAX_LOGIN_ATTEMPTS: getEnvNumber('CLIENT_MAX_LOGIN_ATTEMPTS', 30),
+  CLIENT_LOCKOUT_DURATION_MS: getEnvNumber('CLIENT_LOCKOUT_DURATION_MS', 60000),
 };
 
 export const isProduction = config.NODE_ENV === 'production';

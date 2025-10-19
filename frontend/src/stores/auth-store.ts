@@ -28,6 +28,7 @@ interface AuthState {
   isLoading: boolean;
   error: string | null;
   tenantBranding: TenantBranding | null;
+  isInitialized: boolean; // Track if auth has been initialized
 
   // In-flight request tracking - CORE-CRITICAL Rule 4: Race conditions
   isLoginInProgress: boolean;
@@ -42,6 +43,7 @@ interface AuthState {
   logout: () => Promise<void>;
   refreshAccessToken: () => Promise<void>;
   clearError: () => void;
+  cancelLogin: () => void;
   setUser: (user: UserData | null) => void;
   initializeAuth: () => Promise<void>;
   loadTenantBranding: () => Promise<void>;
@@ -63,6 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: false,
   error: null,
   tenantBranding: null,
+  isInitialized: false,
   isLoginInProgress: false,
   isRegisterInProgress: false,
 
@@ -91,6 +94,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         localStorage.setItem('auth_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        localStorage.setItem('last_activity', Date.now().toString());
       } catch (storageError) {
         // Storage quota exceeded or disabled
         throw new Error('Unable to save authentication data. Please check browser storage settings.');
@@ -110,8 +114,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         error: null,
       });
     } catch (error) {
+      let errorMessage = 'Login failed';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Login request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'No account found with this email address.';
+        } else if (error.message.includes('Wrong user type')) {
+          errorMessage = 'This account type cannot login here. Please select the correct user type.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       set({
-        error: error instanceof Error ? error.message : 'Login failed',
+        error: errorMessage,
         isLoading: false,
         isLoginInProgress: false,
       });
@@ -144,6 +166,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         localStorage.setItem('auth_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        localStorage.setItem('last_activity', Date.now().toString());
       } catch (storageError) {
         // Storage quota exceeded or disabled
         throw new Error('Unable to save authentication data. Please check browser storage settings.');
@@ -166,8 +189,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // DISABLED: Tenant branding now loaded by useTenantBranding() hook in App.tsx
       // await get().loadTenantBranding();
     } catch (error) {
+      let errorMessage = 'Login failed';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Login request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'No account found with this email address.';
+        } else if (error.message.includes('Wrong user type')) {
+          errorMessage = 'This account type cannot login here. Please select the correct user type.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       set({
-        error: error instanceof Error ? error.message : 'Login failed',
+        error: errorMessage,
         isLoading: false,
         isLoginInProgress: false,
       });
@@ -200,6 +241,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         localStorage.setItem('auth_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        localStorage.setItem('last_activity', Date.now().toString());
       } catch (storageError) {
         // Storage quota exceeded or disabled
         throw new Error('Unable to save authentication data. Please check browser storage settings.');
@@ -222,8 +264,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // DISABLED: Tenant branding now loaded by useTenantBranding() hook in App.tsx
       // await get().loadTenantBranding();
     } catch (error) {
+      let errorMessage = 'Login failed';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Login request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'No account found with this email address.';
+        } else if (error.message.includes('Wrong user type')) {
+          errorMessage = 'This account type cannot login here. Please select the correct user type.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       set({
-        error: error instanceof Error ? error.message : 'Login failed',
+        error: errorMessage,
         isLoading: false,
         isLoginInProgress: false,
       });
@@ -256,6 +316,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         localStorage.setItem('auth_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        localStorage.setItem('last_activity', Date.now().toString());
       } catch (storageError) {
         // Storage quota exceeded or disabled
         throw new Error('Unable to save authentication data. Please check browser storage settings.');
@@ -278,8 +339,26 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // DISABLED: Tenant branding now loaded by useTenantBranding() hook in App.tsx
       // await get().loadTenantBranding();
     } catch (error) {
+      let errorMessage = 'Login failed';
+      
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          errorMessage = 'Login request timed out. Please check your connection and try again.';
+        } else if (error.message.includes('Failed to fetch')) {
+          errorMessage = 'Unable to connect to server. Please check your internet connection.';
+        } else if (error.message.includes('Invalid credentials')) {
+          errorMessage = 'Invalid email or password. Please check your credentials.';
+        } else if (error.message.includes('User not found')) {
+          errorMessage = 'No account found with this email address.';
+        } else if (error.message.includes('Wrong user type')) {
+          errorMessage = 'This account type cannot login here. Please select the correct user type.';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
       set({
-        error: error instanceof Error ? error.message : 'Login failed',
+        error: errorMessage,
         isLoading: false,
         isLoginInProgress: false,
       });
@@ -312,6 +391,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       try {
         localStorage.setItem('auth_token', tokens.accessToken);
         localStorage.setItem('refresh_token', tokens.refreshToken);
+        localStorage.setItem('last_activity', Date.now().toString());
       } catch (storageError) {
         // Storage quota exceeded or disabled
         throw new Error('Unable to save authentication data. Please check browser storage settings.');
@@ -353,6 +433,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Clear local storage
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('last_activity');
 
       // Clear API client
       apiClient.setToken(null);
@@ -371,6 +452,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isLoading: false,
         error: null,
         tenantBranding: null,
+        isInitialized: true, // Mark as initialized so we don't auto-login
       });
     }
   },
@@ -426,6 +508,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   /**
+   * Cancel login attempt
+   */
+  cancelLogin: () => {
+    set({
+      isLoginInProgress: false,
+      isLoading: false,
+      error: 'Login cancelled by user'
+    });
+  },
+
+  /**
    * Set user data
    */
   setUser: (user: UserData | null) => {
@@ -435,12 +528,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   /**
    * Initialize auth from localStorage
    * Call this on app startup
+   * SECURITY: Only auto-login if user was recently active (within session)
    */
   initializeAuth: async () => {
     const token = localStorage.getItem('auth_token');
     const refreshToken = localStorage.getItem('refresh_token');
+    const lastActivity = localStorage.getItem('last_activity');
 
-    if (!token) {
+    // Check if session is still valid (within 24 hours)
+    const isSessionValid = lastActivity && 
+      (Date.now() - parseInt(lastActivity)) < (24 * 60 * 60 * 1000);
+
+    if (!token || !isSessionValid) {
+      // Clear invalid session
+      localStorage.removeItem('auth_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('last_activity');
+      set({ isInitialized: true });
       return;
     }
 
@@ -461,11 +565,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         user: response.data.user,
         isAuthenticated: true,
         isLoading: false,
+        isInitialized: true,
       });
     } catch (error) {
       // Token is invalid, clear everything
       localStorage.removeItem('auth_token');
       localStorage.removeItem('refresh_token');
+      localStorage.removeItem('last_activity');
       apiClient.setToken(null);
 
       set({
@@ -474,6 +580,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         refreshToken: null,
         isAuthenticated: false,
         isLoading: false,
+        isInitialized: true,
       });
     }
   },

@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { IBaseModel, baseSchemaOptions, softDeletePlugin } from './base.model';
+import { config } from '../config/env.config';
 
 /**
  * SuperAdmin Model Interface
@@ -172,6 +173,11 @@ superAdminSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
 
+// Virtual for lock status
+superAdminSchema.virtual('isLocked').get(function() {
+  return !!(this.lockUntil && this.lockUntil > new Date());
+});
+
 // Ensure virtual fields are serialized
 superAdminSchema.set('toJSON', {
   virtuals: true,
@@ -209,8 +215,22 @@ superAdminSchema.methods.isActiveAccount = function() {
 };
 
 superAdminSchema.methods.incrementLoginAttempts = async function() {
-  // This will restart the function and avoid declaring unused variables
-  return this.updateOne({ $inc: { loginAttempts: 1 } });
+  // If we have a previous lock that has expired, restart at 1
+  if (this.lockUntil && this.lockUntil < new Date()) {
+    return this.updateOne({
+      $unset: { lockUntil: 1 },
+      $set: { loginAttempts: 1 }
+    });
+  }
+  
+  const updates: any = { $inc: { loginAttempts: 1 } };
+  
+  // Lock account after configured failed attempts for configured duration
+  if (this.loginAttempts + 1 >= config.SUPER_ADMIN_MAX_LOGIN_ATTEMPTS && !this.isLocked) {
+    updates.$set = { lockUntil: new Date(Date.now() + config.SUPER_ADMIN_LOCKOUT_DURATION_MS) };
+  }
+  
+  return this.updateOne(updates);
 };
 
 superAdminSchema.methods.resetLoginAttempts = async function() {

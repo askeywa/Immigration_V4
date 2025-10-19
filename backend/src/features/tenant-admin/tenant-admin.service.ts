@@ -89,10 +89,8 @@ export interface ClientResponse {
   phone?: string;
   dateOfBirth?: string;
   nationality?: string;
-  applicationType: string;
   status: string;
   emailVerified: boolean;
-  applicationStatus: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -307,10 +305,8 @@ export class TenantAdminService {
       phone: client.profile?.phone,
       dateOfBirth: client.profile?.dateOfBirth ? String(client.profile.dateOfBirth) : undefined,
       nationality: client.profile?.nationality,
-      applicationType: client.applicationType,
       status: client.status,
       emailVerified: client.emailVerified,
-      applicationStatus: client.application.status,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt
     }));
@@ -426,10 +422,8 @@ export class TenantAdminService {
       phone: client.profile?.phone,
       dateOfBirth: client.profile?.dateOfBirth ? String(client.profile.dateOfBirth) : undefined,
       nationality: client.profile?.nationality,
-      applicationType: client.applicationType,
       status: client.status,
       emailVerified: client.emailVerified,
-      applicationStatus: client.application.status,
       createdAt: client.createdAt,
       updatedAt: client.updatedAt
     };

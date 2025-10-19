@@ -92,7 +92,7 @@ export class ValidationUtils {
   }
 
   /**
-   * Validate and sanitize URL
+   * Validate and sanitize URL using native URL constructor (secure)
    * @throws Error if invalid
    */
   static validateURL(url: any): string {
@@ -100,15 +100,30 @@ export class ValidationUtils {
       throw new Error('URL must be a string');
     }
     
-    if (!validator.isURL(url, {
-      protocols: ['http', 'https'],
-      require_protocol: true,
-      require_valid_protocol: true
-    })) {
+    const trimmed = url.trim();
+    
+    try {
+      const urlObj = new URL(trimmed);
+      
+      // Only allow http and https protocols
+      if (!['http:', 'https:'].includes(urlObj.protocol)) {
+        throw new Error('URL must use http or https protocol');
+      }
+      
+      // Additional security checks
+      if (urlObj.hostname.length > 253) {
+        throw new Error('URL hostname too long');
+      }
+      
+      // Check for suspicious patterns
+      if (urlObj.hostname.includes('..') || urlObj.hostname.startsWith('.')) {
+        throw new Error('Invalid URL hostname');
+      }
+      
+      return trimmed;
+    } catch (error) {
       throw new Error('Invalid URL format');
     }
-    
-    return url;
   }
 
   /**

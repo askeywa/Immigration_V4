@@ -141,7 +141,7 @@ export class AuthService {
       const { email, password } = credentials;
 
       // Find tenant by admin email (with password field)
-      const tenant = await Tenant.findOne({ adminEmail: email.toLowerCase(), deletedAt: null }).select('+adminPassword');
+      const tenant = await Tenant.findOne({ adminEmail: email.toLowerCase(), deletedAt: null }).select('+adminPassword +adminLockUntil');
       if (!tenant) {
         throw new AuthenticationError('Invalid credentials');
       }
@@ -149,6 +149,7 @@ export class AuthService {
       // Verify password
       const isPasswordValid = await PasswordUtils.comparePassword(password, tenant.adminPassword);
       if (!isPasswordValid) {
+        await tenant.incrementAdminLoginAttempts();
         throw new AuthenticationError('Invalid credentials');
       }
 
@@ -156,6 +157,9 @@ export class AuthService {
       if (!tenant.isActive()) {
         throw new AuthenticationError('Tenant account is inactive');
       }
+
+      // Reset login attempts on successful login
+      await tenant.resetAdminLoginAttempts();
 
       // Update last login
       tenant.adminLastLogin = new Date();
@@ -409,8 +413,6 @@ export class AuthService {
         tenantId: client.tenantId.toString(),
         tenantName: tenant.name,
         tenantDomain: tenant.domain,
-        applicationType: client.applicationType,
-        applicationStatus: client.application.status,
         permissions: ['view_own_profile', 'edit_own_profile', 'view_own_applications', 'upload_documents'],
         isActive: client.isActive(),
         lastLogin: client.lastLogin,
@@ -640,8 +642,6 @@ export class AuthService {
             tenantId: client.tenantId.toString(),
             tenantName: clientTenant?.name || 'Unknown',
             tenantDomain: clientTenant?.domain || 'Unknown',
-            applicationType: client.applicationType,
-            applicationStatus: client.application.status,
             permissions: ['view_own_profile', 'edit_own_profile', 'view_own_applications', 'upload_documents'],
             isActive: client.isActive(),
             lastLogin: client.lastLogin,

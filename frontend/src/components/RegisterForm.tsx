@@ -10,7 +10,6 @@
  */
 
 import React, { useState, useCallback, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import DOMPurify from 'dompurify';
 import { 
   EyeIcon,
@@ -19,7 +18,6 @@ import {
   CheckCircleIcon
 } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../stores/auth-store';
-import { RegisterCredentials } from '../types/api.types';
 
 /**
  * Register Form Props
@@ -34,10 +32,7 @@ interface RegisterFormProps {
  * 
  * Following CORE-PATTERNS: React component structure (7 steps)
  */
-export const RegisterForm: React.FC<RegisterFormProps> = ({
-  onSuccess,
-  redirectTo = '/dashboard',
-}) => {
+export const RegisterForm: React.FC<RegisterFormProps> = () => {
   // 1. State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -49,8 +44,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
   const [acceptTerms, setAcceptTerms] = useState(false);
 
   // 2. Hooks
-  const navigate = useNavigate();
-  const { register, isLoading, error, clearError } = useAuthStore();
+  const { isLoading, error, clearError } = useAuthStore();
 
   // 3. Memoized values
   const isFormValid = useMemo(() => {
@@ -89,43 +83,11 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({
       e.preventDefault();
       clearError();
 
-      // Client-side validation
-      if (!isFormValid) {
-        return;
-      }
-
-      if (!passwordsMatch) {
-        // Set custom error without making API call
-        return;
-      }
-
-      try {
-        // XSS Prevention - CORE-CRITICAL Rule 3 (Defense in Depth)
-        const sanitizedEmail = DOMPurify.sanitize(email.trim());
-        const sanitizedFirstName = DOMPurify.sanitize(firstName.trim());
-        const sanitizedLastName = DOMPurify.sanitize(lastName.trim());
-
-        const credentials: RegisterCredentials = {
-          email: sanitizedEmail.toLowerCase(),
-          password,
-          confirmPassword,
-          firstName: sanitizedFirstName,
-          lastName: sanitizedLastName,
-        };
-
-        await register(credentials);
-
-        // Handle successful registration
-        if (onSuccess) {
-          onSuccess();
-        }
-
-        navigate(redirectTo, { replace: true });
-      } catch (err) {
-        // Error already handled in store
-      }
+      // Show restriction message instead of processing registration
+      alert('Registration is currently not available. Please contact your immigration consultant to create an account for you.');
+      return;
     },
-    [email, password, confirmPassword, firstName, lastName, isFormValid, passwordsMatch, register, navigate, redirectTo, onSuccess, clearError]
+    [clearError]
   );
 
   const handleEmailChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {

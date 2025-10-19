@@ -36,7 +36,7 @@ export class AuthService {
     return apiClient.post<AuthResponse>('/api/v1/auth/login/super-admin', {
       email: sanitizedEmail.toLowerCase(),
       password: credentials.password
-    });
+    }, { timeout: 10000 }); // 10 second timeout for login
   }
 
   /**
@@ -52,7 +52,7 @@ export class AuthService {
     return apiClient.post<AuthResponse>('/api/v1/auth/login/tenant-admin', {
       email: sanitizedEmail.toLowerCase(),
       password: credentials.password
-    });
+    }, { timeout: 10000 }); // 10 second timeout for login
   }
 
   /**
@@ -68,7 +68,7 @@ export class AuthService {
     return apiClient.post<AuthResponse>('/api/v1/auth/login/team-member', {
       email: sanitizedEmail.toLowerCase(),
       password: credentials.password
-    });
+    }, { timeout: 10000 }); // 10 second timeout for login
   }
 
   /**
@@ -84,7 +84,7 @@ export class AuthService {
     return apiClient.post<AuthResponse>('/api/v1/auth/login/client', {
       email: sanitizedEmail.toLowerCase(),
       password: credentials.password
-    });
+    }, { timeout: 10000 }); // 10 second timeout for login
   }
 
   /**

@@ -28,6 +28,7 @@ interface ApiClientConfig {
 interface RequestOptions extends Omit<RequestInit, 'signal'> {
   skipAuth?: boolean;
   skipTenant?: boolean;
+  timeout?: number; // Custom timeout for specific requests
 }
 
 /**
@@ -107,7 +108,8 @@ class ApiClient {
   ): Promise<ApiResponse<T>> {
     // Create AbortController for timeout - CORE-CRITICAL Rule 5
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.config.timeout);
+    const timeout = options?.timeout || this.config.timeout;
+    const timeoutId = setTimeout(() => controller.abort(), timeout);
 
     try {
       const response = await fetch(`${this.config.baseURL}${endpoint}`, {

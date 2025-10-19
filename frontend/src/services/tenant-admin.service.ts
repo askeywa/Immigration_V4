@@ -45,10 +45,8 @@ export interface ClientData {
   phone?: string;
   dateOfBirth?: string;
   nationality?: string;
-  applicationType: string;
   status: string;
   emailVerified: boolean;
-  applicationStatus: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,7 +75,6 @@ export interface CreateClientInput {
   phone?: string;
   dateOfBirth?: string;
   nationality?: string;
-  applicationType: 'visitor_visa' | 'study_visa' | 'work_permit' | 'permanent_residence' | 'family_sponsorship' | 'business_immigration';
   assignedTo?: string;
 }
 
@@ -177,7 +174,6 @@ export class TenantAdminService {
       phone: input.phone ? DOMPurify.sanitize(input.phone.trim()) : undefined,
       dateOfBirth: input.dateOfBirth ? DOMPurify.sanitize(input.dateOfBirth) : undefined,
       nationality: input.nationality ? DOMPurify.sanitize(input.nationality.trim()) : undefined,
-      applicationType: input.applicationType,
       assignedTo: input.assignedTo ? DOMPurify.sanitize(input.assignedTo) : undefined
     };
 
@@ -185,6 +181,39 @@ export class TenantAdminService {
       '/api/v1/tenant-admin/clients',
       sanitizedInput
     );
+  }
+
+  /**
+   * Update client
+   */
+  static async updateClient(
+    clientId: string,
+    input: Partial<CreateClientInput>
+  ): Promise<ApiResponse<{ client: ClientData; message: string }>> {
+    // XSS Prevention - CORE-CRITICAL Rule 3
+    const sanitizedId = DOMPurify.sanitize(clientId);
+    const sanitizedInput: Partial<CreateClientInput> = {};
+
+    if (input.firstName) sanitizedInput.firstName = DOMPurify.sanitize(input.firstName.trim());
+    if (input.lastName) sanitizedInput.lastName = DOMPurify.sanitize(input.lastName.trim());
+    if (input.phone) sanitizedInput.phone = DOMPurify.sanitize(input.phone.trim());
+    if (input.dateOfBirth) sanitizedInput.dateOfBirth = DOMPurify.sanitize(input.dateOfBirth);
+    if (input.nationality) sanitizedInput.nationality = DOMPurify.sanitize(input.nationality.trim());
+    if (input.assignedTo) sanitizedInput.assignedTo = DOMPurify.sanitize(input.assignedTo);
+
+    return apiClient.put<{ client: ClientData; message: string }>(
+      `/api/v1/tenant-admin/clients/${sanitizedId}`,
+      sanitizedInput
+    );
+  }
+
+  /**
+   * Delete client
+   */
+  static async deleteClient(clientId: string): Promise<ApiResponse<{ message: string }>> {
+    // XSS Prevention - CORE-CRITICAL Rule 3
+    const sanitizedId = DOMPurify.sanitize(clientId);
+    return apiClient.delete<{ message: string }>(`/api/v1/tenant-admin/clients/${sanitizedId}`);
   }
 
   /**

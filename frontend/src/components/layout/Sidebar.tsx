@@ -48,7 +48,6 @@ const Sidebar: React.FC<SidebarProps> = ({
         return [
           { name: 'Dashboard', href: '/super-admin/dashboard', icon: HomeIcon },
           { name: 'Tenants', href: '/super-admin/tenants', icon: BuildingOfficeIcon },
-          { name: 'Users', href: '/super-admin/users', icon: UsersIcon },
           { name: 'Audit Logs', href: '/super-admin/audit-logs', icon: ClipboardDocumentListIcon },
           { name: 'System Health', href: '/super-admin/system-health', icon: ShieldCheckIcon },
           { name: 'Analytics', href: '/super-admin/analytics', icon: ChartBarIcon },

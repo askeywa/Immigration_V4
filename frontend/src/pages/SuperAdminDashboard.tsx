@@ -43,13 +43,15 @@ export const SuperAdminDashboard: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      // Load real data from API
       const response = await SuperAdminService.getTenants();
-      
       if (response.success && response.data) {
         setTenants(response.data.tenants);
+        return;
       } else {
         throw new Error(response.error?.message || 'Failed to load tenants');
       }
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load tenants';
       setError(errorMessage);

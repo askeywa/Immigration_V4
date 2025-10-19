@@ -14,6 +14,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { useTenantBranding } from './hooks/useTenantBranding';
+import { useSessionTracker } from './hooks/useSessionTracker';
 import { LandingPage } from './pages/LandingPage';
 import { Register } from './pages/Register';
 import { ResetPassword } from './pages/ResetPassword';
@@ -25,7 +26,6 @@ import ClientDashboard from './pages/ClientDashboard';
 
 // Super Admin Pages
 import TenantsPage from './pages/super-admin/TenantsPage';
-import UsersPage from './pages/super-admin/UsersPage';
 import AuditLogPage from './pages/super-admin/AuditLogPage';
 import SystemHealthPage from './pages/super-admin/SystemHealthPage';
 import AnalyticsPage from './pages/super-admin/AnalyticsPage';
@@ -65,6 +65,9 @@ const App: React.FC = () => {
   
   // CRITICAL FIX: Load tenant branding automatically when user logs in
   useTenantBranding();
+  
+  // Track user session activity
+  useSessionTracker();
 
   // Following CORE-CRITICAL Rule 2: Cleanup in useEffect
   useEffect(() => {
@@ -140,14 +143,6 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <TenantsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/super-admin/users"
-              element={
-                <ProtectedRoute>
-                  <UsersPage />
                 </ProtectedRoute>
               }
             />

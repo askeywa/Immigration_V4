@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { IBaseModel, baseSchemaOptions, softDeletePlugin } from './base.model';
+import { config } from '../config/env.config';
 
 /**
  * Tenant Model Interface
@@ -18,6 +19,8 @@ export interface ITenant extends IBaseModel {
   adminFirstName: string;
   adminLastName: string;
   adminLastLogin?: Date;
+  adminLoginAttempts: number;
+  adminLockUntil?: Date;
   
   settings: {
     maxTeamMembers: number;
@@ -71,11 +74,14 @@ export interface ITenant extends IBaseModel {
   
   // Virtual properties
   fullDomain: string;
+  isAdminLocked: boolean;
   
   // Instance methods
   isActive(): boolean;
   canAddTeamMember(currentCount: number): boolean;
   canAddClient(currentCount: number): boolean;
+  incrementAdminLoginAttempts(): Promise<void>;
+  resetAdminLoginAttempts(): Promise<void>;
 }
 
 /**
@@ -147,6 +153,14 @@ const tenantSchema = new Schema<ITenant>({
   adminLastLogin: {
     type: Date,
     index: true
+  },
+  adminLoginAttempts: {
+    type: Number,
+    default: 0
+  },
+  adminLockUntil: {
+    type: Date,
+    select: false
   },
   
   settings: {
@@ -314,6 +328,11 @@ tenantSchema.virtual('fullDomain').get(function() {
   return this.subdomain ? `${this.subdomain}.${this.domain}` : this.domain;
 });
 
+// Virtual for admin lock status
+tenantSchema.virtual('isAdminLocked').get(function() {
+  return !!(this.adminLockUntil && this.adminLockUntil > new Date());
+});
+
 // Ensure virtual fields are serialized
 tenantSchema.set('toJSON', {
   virtuals: true,
@@ -361,6 +380,31 @@ tenantSchema.methods.canAddTeamMember = function(currentCount: number) {
 
 tenantSchema.methods.canAddClient = function(currentCount: number) {
   return currentCount < this.settings.maxClients;
+};
+
+tenantSchema.methods.incrementAdminLoginAttempts = function() {
+  // If we have a previous lock that has expired, restart at 1
+  if (this.adminLockUntil && this.adminLockUntil < new Date()) {
+    return this.updateOne({
+      $unset: { adminLockUntil: 1 },
+      $set: { adminLoginAttempts: 1 }
+    });
+  }
+  
+  const updates: any = { $inc: { adminLoginAttempts: 1 } };
+  
+  // Lock account after configured failed attempts for configured duration
+  if (this.adminLoginAttempts + 1 >= config.TENANT_ADMIN_MAX_LOGIN_ATTEMPTS && !this.isAdminLocked) {
+    updates.$set = { adminLockUntil: new Date(Date.now() + config.TENANT_ADMIN_LOCKOUT_DURATION_MS) };
+  }
+  
+  return this.updateOne(updates);
+};
+
+tenantSchema.methods.resetAdminLoginAttempts = function() {
+  return this.updateOne({
+    $unset: { adminLoginAttempts: 1, adminLockUntil: 1 }
+  });
 };
 
 // Add static methods to the model

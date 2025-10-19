@@ -103,15 +103,15 @@ export const TeamMemberDashboard: React.FC = () => {
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">
-              {clients.filter(c => c.applicationStatus !== 'draft').length}
+              {clients.filter(c => c.status === 'active').length}
             </div>
-            <div className="text-sm text-gray-600">Active Applications</div>
+            <div className="text-sm text-gray-600">Active Clients</div>
           </div>
           <div className="bg-white border border-gray-200 rounded-lg p-4 text-center">
             <div className="text-2xl font-bold text-gray-900">
-              {clients.filter(c => c.applicationStatus === 'in_review').length}
+              {clients.filter(c => c.status === 'pending').length}
             </div>
-            <div className="text-sm text-gray-600">Under Review</div>
+            <div className="text-sm text-gray-600">Pending Clients</div>
           </div>
         </div>
 
@@ -155,7 +155,6 @@ export const TeamMemberDashboard: React.FC = () => {
                     <tr>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Client</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Contact</th>
-                      <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Application</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Status</th>
                       <th className="px-3 py-2 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">Created</th>
                     </tr>
@@ -182,19 +181,13 @@ export const TeamMemberDashboard: React.FC = () => {
                           )}
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap">
-                          <span className="inline-flex px-2 py-0.5 text-xs font-medium rounded-full bg-indigo-100 text-indigo-800">
-                            {client.applicationType.replace('_', ' ')}
-                          </span>
-                        </td>
-                        <td className="px-3 py-2 whitespace-nowrap">
                           <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                            client.applicationStatus === 'approved' ? 'bg-green-100 text-green-800' :
-                            client.applicationStatus === 'rejected' ? 'bg-red-100 text-red-800' :
-                            client.applicationStatus === 'in_review' ? 'bg-amber-100 text-amber-800' :
-                            client.applicationStatus === 'submitted' ? 'bg-primary-100 text-primary-800' :
+                            client.status === 'active' ? 'bg-green-100 text-green-800' :
+                            client.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                            client.status === 'pending' ? 'bg-amber-100 text-amber-800' :
                             'bg-gray-100 text-gray-800'
                           }`}>
-                            {client.applicationStatus.replace('_', ' ')}
+                            {client.status}
                           </span>
                         </td>
                         <td className="px-3 py-2 whitespace-nowrap text-xs text-gray-500">

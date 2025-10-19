@@ -58,7 +58,9 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
     loginTeamMember, 
     loginClient,
     isLoginInProgress,
-    clearError 
+    clearError,
+    cancelLogin,
+    error
   } = useAuthStore();
 
   /**
@@ -68,6 +70,16 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     return emailRegex.test(email);
   }, []);
+
+  /**
+   * Handle cancel login
+   */
+  const handleCancelLogin = useCallback(() => {
+    setIsSubmitting(false);
+    setLocalError('');
+    clearError();
+    cancelLogin();
+  }, [clearError, cancelLogin]);
 
   /**
    * Handle form submission
@@ -84,6 +96,7 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
 
     setIsSubmitting(true);
     setLocalError('');
+    clearError(); // Clear any previous errors
 
     try {
       // CRITICAL FIX: Only trim email, NEVER sanitize passwords
@@ -203,6 +216,13 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
     };
   }, []);
 
+  // Reset form state when error occurs
+  useEffect(() => {
+    if (error && (isLoginInProgress || isSubmitting)) {
+      setIsSubmitting(false);
+    }
+  }, [error, isLoginInProgress, isSubmitting]);
+
   return (
     <div className="w-full">
       <div className="text-center mb-6">
@@ -286,7 +306,7 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
           </div>
 
           {/* Error Display - CRITICAL FIX: Use local error as primary, store error as fallback */}
-          {localError && (
+          {(localError || error) && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3" role="alert" aria-live="polite">
               <div className="flex">
                 <div className="flex-shrink-0">
@@ -295,8 +315,8 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
                   </svg>
                 </div>
                 <div className="ml-2">
-                  <p id="email-error" className="text-sm text-red-800">
-                    {localError}
+                  <p id="error-message" className="text-sm text-red-800">
+                    {localError || error}
                   </p>
                 </div>
               </div>
@@ -321,6 +341,17 @@ export const RCICLoginForm: React.FC<RCICLoginFormProps> = ({ onSuccess, onError
               `Sign in as ${USER_TYPES.find(t => t.value === userType)?.label}`
             )}
           </button>
+
+          {/* Cancel Button - Only show when login is in progress */}
+          {(isLoginInProgress || isSubmitting) && (
+            <button
+              type="button"
+              onClick={handleCancelLogin}
+              className="w-full mt-2 bg-gray-500 hover:bg-gray-600 text-white font-medium py-2 px-4 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+            >
+              Cancel Login
+            </button>
+          )}
         </form>
 
         {/* Additional Links */}

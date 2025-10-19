@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { IBaseModel, baseSchemaOptions, softDeletePlugin } from './base.model';
+import { config } from '../config/env.config';
 
 /**
  * User Model Interface
@@ -12,7 +13,6 @@ export interface IUser extends IBaseModel {
   password: string;
   firstName: string;
   lastName: string;
-  applicationType: 'visitor_visa' | 'study_visa' | 'work_permit' | 'permanent_residence' | 'family_sponsorship' | 'business_immigration';
   status: 'active' | 'inactive' | 'pending' | 'suspended';
   emailVerified: boolean;
   emailVerificationToken?: string;
@@ -40,14 +40,6 @@ export interface IUser extends IBaseModel {
       push: boolean;
       sms: boolean;
     };
-  };
-  application: {
-    type: string;
-    status: 'draft' | 'submitted' | 'in_review' | 'approved' | 'rejected' | 'in_progress';
-    submittedAt?: Date;
-    documents: string[];
-    notes?: string;
-    priority: 'low' | 'medium' | 'high' | 'urgent';
   };
   preferences: {
     theme: 'light' | 'dark' | 'system';
@@ -126,12 +118,6 @@ const userSchema = new Schema<IUser>({
     required: true,
     trim: true,
     maxlength: 50
-  },
-  applicationType: {
-    type: String,
-    enum: ['visitor_visa', 'study_visa', 'work_permit', 'permanent_residence', 'family_sponsorship', 'business_immigration'],
-    required: true,
-    index: true
   },
   status: {
     type: String,
@@ -214,26 +200,6 @@ const userSchema = new Schema<IUser>({
       }
     }
   },
-  application: {
-    type: {
-      type: String,
-      enum: ['visitor_visa', 'study_visa', 'work_permit', 'permanent_residence', 'family_sponsorship', 'business_immigration'],
-      required: true
-    },
-    status: {
-      type: String,
-      enum: ['draft', 'submitted', 'in_review', 'approved', 'rejected', 'in_progress'],
-      default: 'draft'
-    },
-    submittedAt: Date,
-    documents: [String],
-    notes: String,
-    priority: {
-      type: String,
-      enum: ['low', 'medium', 'high', 'urgent'],
-      default: 'medium'
-    }
-  },
   preferences: {
     theme: {
       type: String,
@@ -278,9 +244,7 @@ userSchema.index({ createdAt: -1 });
 
 // PERFORMANCE FIX: Compound indexes for analytics and filtering
 userSchema.index({ tenantId: 1, deletedAt: 1, status: 1 });
-userSchema.index({ tenantId: 1, deletedAt: 1, applicationType: 1 });
 userSchema.index({ tenantId: 1, assignedTo: 1, deletedAt: 1 });
-userSchema.index({ 'application.status': 1, tenantId: 1, deletedAt: 1 });
 
 // Virtual for full name
 userSchema.virtual('fullName').get(function() {
@@ -357,9 +321,9 @@ userSchema.methods.incrementLoginAttempts = function() {
   
   const updates: any = { $inc: { loginAttempts: 1 } };
   
-  // Lock account after 5 failed attempts for 2 hours
-  if (this.loginAttempts + 1 >= 5 && !this.isLocked) {
-    updates.$set = { lockUntil: new Date(Date.now() + 2 * 60 * 60 * 1000) }; // 2 hours
+  // Lock account after configured failed attempts for configured duration
+  if (this.loginAttempts + 1 >= config.CLIENT_MAX_LOGIN_ATTEMPTS && !this.isLocked) {
+    updates.$set = { lockUntil: new Date(Date.now() + config.CLIENT_LOCKOUT_DURATION_MS) };
   }
   
   return this.updateOne(updates);

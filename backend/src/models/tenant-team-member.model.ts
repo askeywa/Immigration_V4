@@ -1,5 +1,6 @@
 import mongoose, { Schema } from 'mongoose';
 import { IBaseModel, baseSchemaOptions, softDeletePlugin } from './base.model';
+import { config } from '../config/env.config';
 
 /**
  * TenantTeamMember Model Interface
@@ -16,6 +17,8 @@ export interface ITenantTeamMember extends IBaseModel {
   permissions: string[];
   isActive: boolean;
   lastLogin?: Date;
+  loginAttempts: number;
+  lockUntil?: Date;
   profile: {
     avatar?: string;
     phone?: string;
@@ -40,6 +43,7 @@ export interface ITenantTeamMember extends IBaseModel {
   
   // Virtual properties
   fullName: string;
+  isLocked: boolean;
   
   // Instance methods
   isActiveAccount(): boolean;
@@ -141,6 +145,14 @@ const tenantTeamMemberSchema = new Schema<ITenantTeamMember>({
     type: Date,
     index: true
   },
+  loginAttempts: {
+    type: Number,
+    default: 0
+  },
+  lockUntil: {
+    type: Date,
+    select: false
+  },
   profile: {
     avatar: String,
     phone: {
@@ -207,6 +219,11 @@ tenantTeamMemberSchema.virtual('fullName').get(function() {
   return `${this.firstName} ${this.lastName}`;
 });
 
+// Virtual for lock status
+tenantTeamMemberSchema.virtual('isLocked').get(function() {
+  return !!(this.lockUntil && this.lockUntil > new Date());
+});
+
 // Ensure virtual fields are serialized
 tenantTeamMemberSchema.set('toJSON', {
   virtuals: true,
@@ -254,11 +271,28 @@ tenantTeamMemberSchema.methods.isActiveAccount = function() {
 };
 
 tenantTeamMemberSchema.methods.incrementLoginAttempts = async function() {
-  return this.updateOne({ $inc: { loginAttempts: 1 } });
+  // If we have a previous lock that has expired, restart at 1
+  if (this.lockUntil && this.lockUntil < new Date()) {
+    return this.updateOne({
+      $unset: { lockUntil: 1 },
+      $set: { loginAttempts: 1 }
+    });
+  }
+  
+  const updates: any = { $inc: { loginAttempts: 1 } };
+  
+  // Lock account after configured failed attempts for configured duration
+  if (this.loginAttempts + 1 >= config.TEAM_MEMBER_MAX_LOGIN_ATTEMPTS && !this.isLocked) {
+    updates.$set = { lockUntil: new Date(Date.now() + config.TEAM_MEMBER_LOCKOUT_DURATION_MS) };
+  }
+  
+  return this.updateOne(updates);
 };
 
 tenantTeamMemberSchema.methods.resetLoginAttempts = async function() {
-  return this.updateOne({ $set: { loginAttempts: 0, lockUntil: null } });
+  return this.updateOne({
+    $unset: { loginAttempts: 1, lockUntil: 1 }
+  });
 };
 
 tenantTeamMemberSchema.methods.canAccess = function(requiredPermission: string) {
