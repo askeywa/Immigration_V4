@@ -13,6 +13,7 @@ import {
   ShieldCheckIcon,
   BellIcon,
   SwatchIcon,
+  CreditCardIcon,
 } from '@heroicons/react/24/outline';
 import DOMPurify from 'dompurify';
 
@@ -48,6 +49,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return [
           { name: 'Dashboard', href: '/super-admin/dashboard', icon: HomeIcon },
           { name: 'Tenants', href: '/super-admin/tenants', icon: BuildingOfficeIcon },
+          { name: 'Subscription Plans', href: '/super-admin/subscription-plans', icon: CreditCardIcon },
           { name: 'Audit Logs', href: '/super-admin/audit-logs', icon: ClipboardDocumentListIcon },
           { name: 'System Health', href: '/super-admin/system-health', icon: ShieldCheckIcon },
           { name: 'Analytics', href: '/super-admin/analytics', icon: ChartBarIcon },

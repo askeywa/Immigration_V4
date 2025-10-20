@@ -26,6 +26,7 @@ import ClientDashboard from './pages/ClientDashboard';
 
 // Super Admin Pages
 import TenantsPage from './pages/super-admin/TenantsPage';
+import SubscriptionPlansPage from './pages/super-admin/SubscriptionPlansPage';
 import AuditLogPage from './pages/super-admin/AuditLogPage';
 import SystemHealthPage from './pages/super-admin/SystemHealthPage';
 import AnalyticsPage from './pages/super-admin/AnalyticsPage';
@@ -143,6 +144,14 @@ const App: React.FC = () => {
               element={
                 <ProtectedRoute>
                   <TenantsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/super-admin/subscription-plans"
+              element={
+                <ProtectedRoute>
+                  <SubscriptionPlansPage />
                 </ProtectedRoute>
               }
             />

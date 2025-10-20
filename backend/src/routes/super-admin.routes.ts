@@ -15,6 +15,22 @@ import {
   getTenantSchema,
   deleteTenantSchema
 } from '../features/super-admin/super-admin.schemas';
+import { SubscriptionPlanController } from '../features/subscription-plan/subscription-plan.controller';
+import {
+  createSubscriptionPlanSchema,
+  updateSubscriptionPlanSchema,
+  getAllPlansSchema,
+  getActivePlansSchema,
+  getSubscriptionPlanSchema,
+  deleteSubscriptionPlanSchema,
+  updatePlanStatusSchema,
+  reorderPlansSchema
+} from '../features/subscription-plan/subscription-plan.schemas';
+import {
+  subscriptionPlanReadLimiter,
+  subscriptionPlanWriteLimiter,
+  subscriptionPlanReorderLimiter
+} from '../middleware/subscription-plan-rate-limiters';
 
 const router = Router();
 
@@ -109,6 +125,124 @@ router.get('/system-health',
   requireSuperAdmin,
   auditLog('system.health', 'System'),
   SuperAdminController.getSystemHealth
+);
+
+/**
+ * ========================================
+ * SUBSCRIPTION PLAN ROUTES
+ * ========================================
+ */
+
+/**
+ * @route   GET /api/v1/super-admin/subscription-plans
+ * @desc    Get all subscription plans with optional pagination
+ * @access  Super Admin Only
+ */
+router.get('/subscription-plans',
+  subscriptionPlanReadLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(getAllPlansSchema),
+  auditLog('subscription-plans.list', 'SubscriptionPlan'),
+  SubscriptionPlanController.getPlans
+);
+
+/**
+ * @route   GET /api/v1/super-admin/subscription-plans/active
+ * @desc    Get active subscription plans only with optional pagination
+ * @access  Super Admin Only
+ */
+router.get('/subscription-plans/active',
+  subscriptionPlanReadLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(getActivePlansSchema),
+  auditLog('subscription-plans.list-active', 'SubscriptionPlan'),
+  SubscriptionPlanController.getActivePlans
+);
+
+/**
+ * @route   PUT /api/v1/super-admin/subscription-plans/reorder
+ * @desc    Reorder subscription plans
+ * @access  Super Admin Only
+ */
+router.put('/subscription-plans/reorder',
+  subscriptionPlanReorderLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(reorderPlansSchema),
+  auditLog('subscription-plans.reorder', 'SubscriptionPlan'),
+  SubscriptionPlanController.reorderPlans
+);
+
+/**
+ * @route   POST /api/v1/super-admin/subscription-plans
+ * @desc    Create new subscription plan
+ * @access  Super Admin Only
+ */
+router.post('/subscription-plans',
+  subscriptionPlanWriteLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(createSubscriptionPlanSchema),
+  auditLog('subscription-plans.create', 'SubscriptionPlan'),
+  SubscriptionPlanController.createPlan
+);
+
+/**
+ * @route   PATCH /api/v1/super-admin/subscription-plans/:id/status
+ * @desc    Update subscription plan status
+ * @access  Super Admin Only
+ */
+router.patch('/subscription-plans/:id/status',
+  subscriptionPlanWriteLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(updatePlanStatusSchema),
+  auditLog('subscription-plans.update-status', 'SubscriptionPlan'),
+  SubscriptionPlanController.updatePlanStatus
+);
+
+/**
+ * @route   GET /api/v1/super-admin/subscription-plans/:id
+ * @desc    Get single subscription plan
+ * @access  Super Admin Only
+ */
+router.get('/subscription-plans/:id',
+  subscriptionPlanReadLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(getSubscriptionPlanSchema),
+  auditLog('subscription-plans.view', 'SubscriptionPlan'),
+  SubscriptionPlanController.getPlan
+);
+
+/**
+ * @route   PUT /api/v1/super-admin/subscription-plans/:id
+ * @desc    Update subscription plan
+ * @access  Super Admin Only
+ */
+router.put('/subscription-plans/:id',
+  subscriptionPlanWriteLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(updateSubscriptionPlanSchema),
+  auditLog('subscription-plans.update', 'SubscriptionPlan'),
+  SubscriptionPlanController.updatePlan
+);
+
+/**
+ * @route   DELETE /api/v1/super-admin/subscription-plans/:id
+ * @desc    Delete subscription plan (soft delete)
+ * @access  Super Admin Only
+ */
+router.delete('/subscription-plans/:id',
+  subscriptionPlanWriteLimiter,
+  authenticateToken,
+  requireSuperAdmin,
+  validate(deleteSubscriptionPlanSchema),
+  auditLog('subscription-plans.delete', 'SubscriptionPlan'),
+  SubscriptionPlanController.deletePlan
 );
 
 export default router;

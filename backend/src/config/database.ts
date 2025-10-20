@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { config } from './env.config';
 import logger from '../utils/logger';
+import { SubscriptionPlanIndexMigration } from '../utils/migrations/subscription-plan-index-migration';
 
 /**
  * Connect to MongoDB
@@ -40,6 +41,9 @@ export const connectDatabase = async (): Promise<void> => {
         logger.warn('MongoDB disconnected');
       });
 
+      // Run database migrations after successful connection
+      await runMigrations();
+
       return; // Success, exit retry loop
 
     } catch (error) {
@@ -77,5 +81,25 @@ export const disconnectDatabase = async (): Promise<void> => {
  */
 export const isDatabaseConnected = (): boolean => {
   return mongoose.connection.readyState === 1;
+};
+
+/**
+ * Run database migrations
+ * Executes all necessary database migrations after connection
+ */
+const runMigrations = async (): Promise<void> => {
+  try {
+    logger.info('Running database migrations...');
+    
+    // Run subscription plan index migration
+    await SubscriptionPlanIndexMigration.run();
+    
+    logger.info('Database migrations completed successfully');
+  } catch (error) {
+    logger.error('Database migrations failed', {
+      error: error instanceof Error ? error.message : String(error)
+    });
+    // Don't throw - allow app to start even if migrations fail
+  }
 };
 
