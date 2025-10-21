@@ -12,6 +12,7 @@
 import { Router } from 'express';
 // import { z } from 'zod'; // Commented out for now
 import { authMiddleware } from '../middleware/auth.middleware';
+import { cacheConfigs, createCacheInvalidationMiddleware } from '../middleware/cache.middleware';
 import { Tenant } from '../models/tenant.model';
 import AuditLoggingService from '../services/audit-logging.service';
 import { ValidationUtils } from '../utils/validation.utils';
@@ -41,7 +42,7 @@ router.use(authMiddleware);
  * GET /api/v1/tenant/branding
  * Get current tenant branding
  */
-router.get('/branding', async (req, res) => {
+router.get('/branding', cacheConfigs.tenantSpecific, async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     
@@ -110,7 +111,7 @@ router.get('/branding', async (req, res) => {
  * PUT /api/v1/tenant/branding
  * Update tenant branding
  */
-router.put('/branding', async (req, res) => {
+router.put('/branding', createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant/branding*']), async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     const { logo, theme } = req.body;
@@ -202,7 +203,7 @@ router.put('/branding', async (req, res) => {
  * DELETE /api/v1/tenant/branding/logo
  * Remove tenant logo
  */
-router.delete('/branding/logo', async (req, res) => {
+router.delete('/branding/logo', createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant/branding*']), async (req, res) => {
   try {
     const tenantId = req.user?.tenantId;
     

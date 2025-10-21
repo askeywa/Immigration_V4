@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useLocation } from 'react-router-dom';
 import { 
   BuildingOfficeIcon, 
   UserGroupIcon, 
@@ -11,6 +12,8 @@ import {
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuthStore } from '../../stores/auth-store';
 import { SuperAdminService } from '../../services/super-admin.service';
+import { useToast } from '../../contexts/ToastContext';
+import TenantManagement from '../../components/tenant/TenantManagement';
 
 interface Tenant {
   id: string;
@@ -57,6 +60,8 @@ type TabType = 'tenants' | 'team-members' | 'end-users';
 
 const TenantsPage: React.FC = () => {
   const { user } = useAuthStore();
+  const location = useLocation();
+  const { showError } = useToast();
   const [activeTab, setActiveTab] = useState<TabType>('tenants');
   const [selectedTenant, setSelectedTenant] = useState<string>('all');
   
@@ -72,31 +77,37 @@ const TenantsPage: React.FC = () => {
   const [endUsers, setEndUsers] = useState<EndUser[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Load tenants data
-  const loadTenants = useCallback(async () => {
+  // Handle navigation state to set active tab
+  useEffect(() => {
+    if (location.state && location.state.activeTab) {
+      setActiveTab(location.state.activeTab as TabType);
+    }
+  }, [location.state]);
+
+  // Load tenants data for dropdown and counts (only once on mount)
+  const loadTenantsForFilter = useCallback(async () => {
     try {
-      setLoading(true);
-      // Load real data from API
       const response = await SuperAdminService.getTenants();
       if (response.success && response.data) {
         setTenants(response.data.tenants);
-        return;
       } else {
         throw new Error(response.error?.message || 'Failed to load tenants');
       }
-      
     } catch (error) {
-      console.error('Failed to load tenants:', error);
-    } finally {
-      setLoading(false);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load tenants';
+      showError('Error Loading Tenants', errorMessage);
+      console.error('Failed to load tenants for filter:', error);
     }
-  }, []);
+  }, [showError]);
 
-  // Load team members data (mock data for now)
+
+  // Load team members data
+  // TODO: Replace with actual API call when backend endpoint is ready
+  // Feature Flag: Currently using mock data as super-admin cross-tenant endpoint doesn't exist yet
   const loadTeamMembers = useCallback(async () => {
     try {
       setLoading(true);
-      // Comprehensive mock data - replace with actual API call
+      // Mock data - will be replaced with: await SuperAdminService.getAllTeamMembers()
       const mockTeamMembers: TeamMember[] = [
         // ABC Immigration Services Team
         {
@@ -237,17 +248,21 @@ const TenantsPage: React.FC = () => {
       ];
       setTeamMembers(mockTeamMembers);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load team members';
+      showError('Error Loading Team Members', errorMessage);
       console.error('Failed to load team members:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
-  // Load end users data (mock data for now)
+  // Load end users data
+  // TODO: Replace with actual API call when backend endpoint is ready
+  // Feature Flag: Currently using mock data as super-admin cross-tenant endpoint doesn't exist yet
   const loadEndUsers = useCallback(async () => {
     try {
       setLoading(true);
-      // Comprehensive mock data - replace with actual API call
+      // Mock data - will be replaced with: await SuperAdminService.getAllEndUsers()
       const mockEndUsers: EndUser[] = [
         // ABC Immigration Services Clients
         {
@@ -421,18 +436,31 @@ const TenantsPage: React.FC = () => {
       ];
       setEndUsers(mockEndUsers);
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load end users';
+      showError('Error Loading End Users', errorMessage);
       console.error('Failed to load end users:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [showError]);
 
   // Load all data when component mounts
   useEffect(() => {
-    loadTenants();
+    loadTenantsForFilter();
     loadTeamMembers();
     loadEndUsers();
-  }, [loadTenants, loadTeamMembers, loadEndUsers]);
+  }, [loadTenantsForFilter, loadTeamMembers, loadEndUsers]);
+
+  // Clean up collapsible state to prevent memory leak when tenants change
+  useEffect(() => {
+    setCollapsedTenants(prev => {
+      const validTenantNames = new Set(tenants.map(t => t.name));
+      const cleaned = new Set(
+        Array.from(prev).filter(name => validTenantNames.has(name))
+      );
+      return cleaned;
+    });
+  }, [tenants]);
 
   // Toggle collapsible section
   const toggleCollapse = (tenantName: string) => {
@@ -446,15 +474,6 @@ const TenantsPage: React.FC = () => {
   };
 
   // Search and filter functions
-  const searchTenants = (query: string) => {
-    if (!query) return tenants;
-    return tenants.filter(tenant => 
-      tenant.name.toLowerCase().includes(query.toLowerCase()) ||
-      tenant.domain.toLowerCase().includes(query.toLowerCase()) ||
-      tenant.adminEmail.toLowerCase().includes(query.toLowerCase()) ||
-      `${tenant.adminFirstName} ${tenant.adminLastName}`.toLowerCase().includes(query.toLowerCase())
-    );
-  };
 
   const searchTeamMembers = (query: string, members: TeamMember[]) => {
     if (!query) return members;
@@ -478,40 +497,51 @@ const TenantsPage: React.FC = () => {
     );
   };
 
-  // Filter data based on selected tenant and search query
-  const filteredTenants = searchTenants(searchQuery);
+  // Filter data based on selected tenant and search query (optimized with useMemo)
   
   // Get selected tenant name for filtering
-  const selectedTenantName = selectedTenant === 'all' 
-    ? null 
-    : tenants.find(t => t.id === selectedTenant)?.name;
+  const selectedTenantName = useMemo(() => {
+    return selectedTenant === 'all' 
+      ? null 
+      : tenants.find(t => t.id === selectedTenant)?.name;
+  }, [selectedTenant, tenants]);
 
-  const filteredTeamMembers = selectedTenant === 'all' 
-    ? teamMembers 
-    : teamMembers.filter(member => member.tenantName === selectedTenantName);
-  const searchedTeamMembers = searchTeamMembers(searchQuery, filteredTeamMembers);
+  // Optimize team members filtering and searching
+  const searchedTeamMembers = useMemo(() => {
+    const filtered = selectedTenant === 'all' 
+      ? teamMembers 
+      : teamMembers.filter(member => member.tenantName === selectedTenantName);
+    return searchTeamMembers(searchQuery, filtered);
+  }, [selectedTenant, teamMembers, selectedTenantName, searchQuery]);
 
-  const filteredEndUsers = selectedTenant === 'all' 
-    ? endUsers 
-    : endUsers.filter(user => user.tenantName === selectedTenantName);
-  const searchedEndUsers = searchEndUsers(searchQuery, filteredEndUsers);
+  // Optimize end users filtering and searching
+  const searchedEndUsers = useMemo(() => {
+    const filtered = selectedTenant === 'all' 
+      ? endUsers 
+      : endUsers.filter(user => user.tenantName === selectedTenantName);
+    return searchEndUsers(searchQuery, filtered);
+  }, [selectedTenant, endUsers, selectedTenantName, searchQuery]);
 
-  // Group data by tenant
-  const groupedTeamMembers = searchedTeamMembers.reduce((acc, member) => {
-    if (!acc[member.tenantName]) {
-      acc[member.tenantName] = [];
-    }
-    acc[member.tenantName].push(member);
-    return acc;
-  }, {} as Record<string, TeamMember[]>);
+  // Group data by tenant (optimized with useMemo)
+  const groupedTeamMembers = useMemo(() => {
+    return searchedTeamMembers.reduce((acc, member) => {
+      if (!acc[member.tenantName]) {
+        acc[member.tenantName] = [];
+      }
+      acc[member.tenantName].push(member);
+      return acc;
+    }, {} as Record<string, TeamMember[]>);
+  }, [searchedTeamMembers]);
 
-  const groupedEndUsers = searchedEndUsers.reduce((acc, user) => {
-    if (!acc[user.tenantName]) {
-      acc[user.tenantName] = [];
-    }
-    acc[user.tenantName].push(user);
-    return acc;
-  }, {} as Record<string, EndUser[]>);
+  const groupedEndUsers = useMemo(() => {
+    return searchedEndUsers.reduce((acc, user) => {
+      if (!acc[user.tenantName]) {
+        acc[user.tenantName] = [];
+      }
+      acc[user.tenantName].push(user);
+      return acc;
+    }, {} as Record<string, EndUser[]>);
+  }, [searchedEndUsers]);
 
   const tabs = [
     { id: 'tenants', name: 'Tenants', icon: BuildingOfficeIcon, count: tenants.length },
@@ -602,89 +632,9 @@ const TenantsPage: React.FC = () => {
         <div className="bg-white rounded-lg border border-gray-200">
           {activeTab === 'tenants' && (
             <div className="p-6">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Tenant
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Admin
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Plan
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Usage
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Created
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {loading ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                          Loading tenants...
-                        </td>
-                      </tr>
-                    ) : filteredTenants.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-6 py-4 text-center text-gray-500">
-                          {searchQuery ? 'No tenants found matching your search' : 'No tenants found'}
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredTenants.map((tenant) => (
-                        <tr key={tenant.id} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div>
-                              <div className="text-sm font-medium text-gray-900">{tenant.name}</div>
-                              <div className="text-sm text-gray-500">{tenant.domain}</div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {tenant.adminFirstName} {tenant.adminLastName}
-                            </div>
-                            <div className="text-sm text-gray-500">{tenant.adminEmail}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              tenant.plan === 'premium' 
-                                ? 'bg-red-100 text-red-800' 
-                                : 'bg-green-100 text-green-800'
-                            }`}>
-                              {tenant.plan}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            <div>Team: {tenant.currentTeamMembers}/{tenant.maxTeamMembers}</div>
-                            <div>Users: {tenant.currentClients}/{tenant.maxClients}</div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                              tenant.status === 'active' 
-                                ? 'bg-green-100 text-green-800' 
-                                : 'bg-gray-100 text-gray-800'
-                            }`}>
-                              {tenant.status}
-                            </span>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {new Date(tenant.createdAt).toLocaleDateString()}
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <TenantManagement 
+                onTenantCountChange={loadTenantsForFilter}
+              />
             </div>
           )}
 
@@ -705,6 +655,9 @@ const TenantsPage: React.FC = () => {
                       <button
                         onClick={() => toggleCollapse(tenantName)}
                         className="w-full px-6 py-4 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
+                        aria-expanded={!collapsedTenants.has(tenantName)}
+                        aria-controls={`team-members-${tenantName.replace(/\s+/g, '-')}`}
+                        aria-label={`Toggle ${tenantName} team members`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -725,7 +678,7 @@ const TenantsPage: React.FC = () => {
                       </button>
                       
                       {!collapsedTenants.has(tenantName) && (
-                        <div className="border-t border-gray-200">
+                        <div className="border-t border-gray-200" id={`team-members-${tenantName.replace(/\s+/g, '-')}`}>
                           <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                               <thead className="bg-gray-50">
@@ -806,6 +759,9 @@ const TenantsPage: React.FC = () => {
                       <button
                         onClick={() => toggleCollapse(tenantName)}
                         className="w-full px-6 py-4 text-left hover:bg-gray-50 focus:outline-none focus:bg-gray-50 transition-colors"
+                        aria-expanded={!collapsedTenants.has(tenantName)}
+                        aria-controls={`end-users-${tenantName.replace(/\s+/g, '-')}`}
+                        aria-label={`Toggle ${tenantName} end users`}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
@@ -826,7 +782,7 @@ const TenantsPage: React.FC = () => {
                       </button>
                       
                       {!collapsedTenants.has(tenantName) && (
-                        <div className="border-t border-gray-200">
+                        <div className="border-t border-gray-200" id={`end-users-${tenantName.replace(/\s+/g, '-')}`}>
                           <div className="overflow-x-auto">
                             <table className="min-w-full divide-y divide-gray-200">
                               <thead className="bg-gray-50">

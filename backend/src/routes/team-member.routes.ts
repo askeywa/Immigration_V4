@@ -8,6 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, requireTeamMember, auditLog, requirePermission } from '../middleware/auth.middleware';
 import { validateBody, validateParams } from '../middleware/zod.middleware';
+import { cacheConfigs, createCacheInvalidationMiddleware } from '../middleware/cache.middleware';
 import { z } from 'zod';
 import { schemas } from '../utils/zod.schemas';
 import { ValidationUtils } from '../utils/validation.utils';
@@ -352,6 +353,7 @@ const uploadDocumentSchema = z.object({
  * @access  Team Member Only
  */
 router.get('/my-clients',
+  cacheConfigs.userSpecific, // Cache user-specific assigned clients for 5 minutes
   authenticateToken,
   requireTeamMember,
   auditLog('clients.list_assigned', 'User'),
@@ -364,6 +366,7 @@ router.get('/my-clients',
  * @access  Team Member Only
  */
 router.post('/clients',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/team-member/my-clients*']), // Invalidate assigned clients cache
   authenticateToken,
   requireTeamMember,
   requirePermission('create_clients'),
@@ -393,6 +396,7 @@ router.put('/clients/:id',
  * @access  Team Member Only
  */
 router.get('/applications',
+  cacheConfigs.userSpecific, // Cache user-specific applications for 5 minutes
   authenticateToken,
   requireTeamMember,
   auditLog('applications.list', 'Application'),

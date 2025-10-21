@@ -3,13 +3,19 @@ import { UsersIcon, PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { useAuthStore } from '../../stores/auth-store';
 import { TenantAdminService, ClientData, CreateClientInput } from '../../services/tenant-admin.service';
+import { useToast } from '../../contexts/ToastContext';
+import DeleteConfirmModal from '../../components/modals/DeleteConfirmModal';
 
 const ClientsPage: React.FC = () => {
   const { user } = useAuthStore();
+  const { showSuccess, showError } = useToast();
   const [clients, setClients] = useState<ClientData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteClient, setDeleteClient] = useState<{ id: string; name: string } | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const loadClients = useCallback(async () => {
     try {
@@ -31,25 +37,38 @@ const ClientsPage: React.FC = () => {
     }
   }, []);
 
-  const handleDeleteClient = useCallback(async (clientId: string, clientName: string) => {
-    if (!window.confirm(`Are you sure you want to delete client "${clientName}"?`)) {
-      return;
-    }
+  const handleDeleteClick = useCallback((clientId: string, clientName: string) => {
+    setDeleteClient({ id: clientId, name: clientName });
+    setShowDeleteModal(true);
+  }, []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!deleteClient) return;
 
     try {
-      const response = await TenantAdminService.deleteClient(clientId);
+      setIsDeleting(true);
+      const response = await TenantAdminService.deleteClient(deleteClient.id);
       
       if (response.success) {
         await loadClients();
-        alert('Client deleted successfully');
+        showSuccess('Client Deleted Successfully', `Client "${deleteClient.name}" has been deleted successfully.`);
+        setShowDeleteModal(false);
+        setDeleteClient(null);
       } else {
         throw new Error(response.error?.message || 'Failed to delete client');
       }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete client';
-      alert(`Error: ${errorMessage}`);
+      showError('Failed to Delete Client', errorMessage);
+    } finally {
+      setIsDeleting(false);
     }
-  }, [loadClients]);
+  }, [deleteClient, loadClients, showSuccess, showError]);
+
+  const cancelDelete = useCallback(() => {
+    setShowDeleteModal(false);
+    setDeleteClient(null);
+  }, []);
 
   useEffect(() => {
     loadClients();
@@ -151,7 +170,7 @@ const ClientsPage: React.FC = () => {
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
                         <button 
-                          onClick={() => handleDeleteClient(client.id, `${client.firstName} ${client.lastName}`)}
+                          onClick={() => handleDeleteClick(client.id, `${client.firstName} ${client.lastName}`)}
                           className="text-red-600 hover:text-red-900 flex items-center gap-1"
                         >
                           <TrashIcon className="h-4 w-4" />
@@ -177,6 +196,18 @@ const ClientsPage: React.FC = () => {
             }}
           />
         )}
+
+        {/* Delete Confirmation Modal */}
+        <DeleteConfirmModal
+          isOpen={showDeleteModal}
+          onClose={cancelDelete}
+          onConfirm={confirmDelete}
+          title="Delete Client"
+          message={`Are you sure you want to delete client "${deleteClient?.name}"?`}
+          itemName={deleteClient?.name || ''}
+          itemType="client"
+          isDeleting={isDeleting}
+        />
       </div>
     </DashboardLayout>
   );

@@ -1,169 +1,193 @@
-/**
- * Delete Confirmation Modal Component
- * Modal for confirming plan deletion
- */
-
-import React, { useState } from 'react';
-import { XMarkIcon, ExclamationTriangleIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { SubscriptionPlanService, SubscriptionPlanData } from '../../services/subscription-plan.service';
-import logger from '../../utils/logger';
+import React, { useEffect, useRef } from 'react';
+import { ExclamationTriangleIcon, XMarkIcon, ShieldExclamationIcon } from '@heroicons/react/24/outline';
+import DOMPurify from 'dompurify';
 
 interface DeleteConfirmModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
-  plan: SubscriptionPlanData | null;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  itemName: string;
+  itemType?: string;
+  isDeleting?: boolean;
 }
 
 const DeleteConfirmModal: React.FC<DeleteConfirmModalProps> = ({
   isOpen,
   onClose,
-  onSuccess,
-  plan
+  onConfirm,
+  title,
+  message,
+  itemName,
+  itemType = 'item',
+  isDeleting = false
 }) => {
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>('');
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
 
-  const handleDelete = async () => {
-    if (!plan) return;
-
-    setLoading(true);
-    setError('');
-    
-    try {
-      await SubscriptionPlanService.deletePlan(plan.id);
-      onSuccess();
-      onClose();
-    } catch (error) {
-      logger.error('Delete plan failed', {
-        error: error instanceof Error ? error.message : 'Unknown error',
-        planId: plan?.id
-      });
-      
-      // Handle different error types
-      if (error && typeof error === 'object' && 'response' in error) {
-        const axiosError = error as any;
-        setError(axiosError.response?.data?.error?.message || 'Failed to delete plan');
-      } else if (error instanceof Error) {
-        setError(error.message);
-      } else {
-        setError('An unknown error occurred');
+  // Handle escape key and initial focus
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isDeleting) {
+        onClose();
       }
-    } finally {
-      setLoading(false);
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+      
+      // Set initial focus to cancel button for better keyboard UX
+      setTimeout(() => {
+        if (cancelButtonRef.current) {
+          cancelButtonRef.current.focus();
+        }
+      }, 100);
     }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose, isDeleting]);
+
+  // Focus trap implementation
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+
+      const modal = document.querySelector('[role="dialog"]') as HTMLElement;
+      if (!modal) return;
+
+      const focusableElements = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      ) as NodeListOf<HTMLElement>;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        // Shift + Tab
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        }
+      } else {
+        // Tab
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleTabKey);
+    return () => document.removeEventListener('keydown', handleTabKey);
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleConfirm = () => {
+    onConfirm();
   };
 
-  if (!isOpen || !plan) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-screen items-center justify-center p-4">
-        {/* Backdrop */}
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
-          onClick={onClose}
-        />
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-in fade-in duration-300"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="delete-modal-title"
+      aria-describedby="delete-modal-description"
+    >
+      {/* Modal Container */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all duration-300 ease-in-out animate-in zoom-in-95 slide-in-from-bottom-4">
         
-        {/* Modal */}
-        <div className="relative w-full max-w-md bg-white dark:bg-gray-800 rounded-lg shadow-xl">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
-            <div className="flex items-center gap-3">
-              <div className="flex-shrink-0">
-                <ExclamationTriangleIcon className="h-6 w-6 text-red-600" />
+        {/* Header with Gradient Background */}
+        <div className="relative bg-gradient-to-r from-red-500 to-red-600 dark:from-red-600 dark:to-red-700 rounded-t-2xl p-6">
+          <div className="absolute inset-0 bg-black/10 rounded-t-2xl"></div>
+          <div className="relative flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex-shrink-0 w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border-2 border-white/30">
+                <ShieldExclamationIcon className="w-7 h-7 text-white drop-shadow-lg" />
               </div>
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                Delete Plan
-              </h2>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6">
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-md">
-                {error}
-              </div>
-            )}
-
-            <div className="mb-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
-                Are you sure you want to delete this subscription plan? This action cannot be undone.
-              </p>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <h3 className="font-medium text-gray-900 dark:text-white mb-2">
-                  {plan.name}
+              <div>
+                <h3 id="delete-modal-title" className="text-xl font-bold text-white drop-shadow-sm">
+                  {DOMPurify.sanitize(title)}
                 </h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                  {plan.description}
+                <p className="text-red-100 text-sm font-medium">
+                  Confirm destructive action
                 </p>
-                <div className="flex items-center gap-4 text-sm">
-                  <span className="text-gray-600 dark:text-gray-400">
-                    Price: ${plan.pricing.monthly}/month
-                  </span>
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    plan.status === 'active' 
-                      ? 'bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400'
-                      : 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-400'
-                  }`}>
-                    {plan.status}
-                  </span>
-                </div>
               </div>
             </div>
-
-            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg p-4">
-              <div className="flex">
-                <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-0.5" />
-                <div className="ml-3">
-                  <h4 className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
-                    Warning
-                  </h4>
-                  <p className="text-sm text-yellow-700 dark:text-yellow-300 mt-1">
-                    If this plan is currently in use by tenants, the deletion will be prevented to maintain data integrity.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
             <button
-              type="button"
               onClick={onClose}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+              disabled={isDeleting}
+              className="text-white/80 hover:text-white hover:bg-white/20 rounded-full p-2 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              onClick={handleDelete}
-              disabled={loading}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 flex items-center gap-2"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent" />
-                  Deleting...
-                </>
-              ) : (
-                <>
-                  <TrashIcon className="h-4 w-4" />
-                  Delete Plan
-                </>
-              )}
+              <XMarkIcon className="w-6 h-6" />
             </button>
           </div>
+        </div>
+
+        {/* Content */}
+        <div className="p-6">
+          <div className="mb-6">
+            <p id="delete-modal-description" className="text-gray-700 dark:text-gray-300 leading-relaxed text-base">
+              {DOMPurify.sanitize(message)}
+            </p>
+          </div>
+          
+          {/* Warning Card */}
+          <div className="relative bg-gradient-to-r from-red-50 to-red-100 dark:from-red-900/30 dark:to-red-800/30 border-2 border-red-200 dark:border-red-700 rounded-xl p-5 overflow-hidden">
+            <div className="absolute top-0 right-0 w-20 h-20 bg-red-200/30 dark:bg-red-700/30 rounded-full -translate-y-10 translate-x-10"></div>
+            <div className="absolute bottom-0 left-0 w-16 h-16 bg-red-300/20 dark:bg-red-600/20 rounded-full translate-y-8 -translate-x-8"></div>
+            
+            <div className="relative flex items-start gap-4">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-500 rounded-full flex items-center justify-center shadow-lg">
+                <ExclamationTriangleIcon className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1">
+                <p className="text-base font-semibold text-red-800 dark:text-red-200 mb-2">
+                  ⚠️ Irreversible Action
+                </p>
+                <p className="text-sm text-red-700 dark:text-red-300 leading-relaxed">
+                  The <span className="font-semibold bg-red-200 dark:bg-red-800/50 px-2 py-1 rounded-md">{itemType}</span> named <strong className="text-red-900 dark:text-red-100">{DOMPurify.sanitize(itemName)}</strong> will be permanently removed from the system. This action cannot be undone or reversed.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-4 p-6 bg-gray-50 dark:bg-gray-700/50 rounded-b-2xl">
+          <button
+            ref={cancelButtonRef}
+            onClick={onClose}
+            disabled={isDeleting}
+            className="px-6 py-3 text-sm font-semibold text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-600 border-2 border-gray-300 dark:border-gray-500 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-500 hover:border-gray-400 dark:hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm hover:shadow-md"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleConfirm}
+            disabled={isDeleting}
+            className="px-6 py-3 text-sm font-semibold text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 dark:focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 rounded-xl shadow-lg hover:shadow-xl transform hover:scale-105 disabled:hover:scale-100 flex items-center gap-2"
+          >
+            {isDeleting ? (
+              <>
+                <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full" />
+                <span>Deleting...</span>
+              </>
+            ) : (
+              <>
+                <ExclamationTriangleIcon className="w-5 h-5" />
+                <span>Delete {itemType}</span>
+              </>
+            )}
+          </button>
         </div>
       </div>
     </div>

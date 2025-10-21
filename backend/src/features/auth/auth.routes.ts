@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { AuthController } from './auth.controller';
 import { authenticateToken, optionalAuth, authRateLimit } from '../../middleware/auth.middleware';
 import { validate } from '../../middleware/zod.middleware';
+import { cacheConfigs } from '../../middleware/cache.middleware';
 import {
   superAdminLoginSchema,
   tenantAdminLoginSchema,
@@ -80,6 +81,7 @@ router.post('/refresh',
  * @access  Private
  */
 router.get('/profile', 
+  cacheConfigs.userSpecific, // Cache user-specific profile data for 5 minutes
   authenticateToken,
   AuthController.getProfile
 );
@@ -100,6 +102,7 @@ router.post('/logout',
  * @access  Public
  */
 router.get('/health', 
+  cacheConfigs.short, // Cache health check for 1 minute
   AuthController.healthCheck
 );
 

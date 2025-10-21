@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { cacheConfigs } from '../middleware/cache.middleware';
 import RedisService from '../services/redis.service';
 import AuditLoggingService from '../services/audit-logging.service';
 import { AuditLog } from '../models/audit-log.model';
@@ -16,7 +17,7 @@ const router = Router();
  * GET /api/v1/security/audit-logs
  * Get audit logs for the current user or tenant
  */
-router.get('/audit-logs', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/audit-logs', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req.user as any).userId; // Fixed: was 'id', should be 'userId'
     const userType = (req.user as any).userType;
@@ -120,7 +121,7 @@ router.get('/audit-logs', authMiddleware, async (req: Request, res: Response): P
  * GET /api/v1/security/events
  * Get security events (admin only)
  */
-router.get('/events', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/events', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins can view security events
     if ((req.user as any).userType !== 'super_admin') {
@@ -164,7 +165,7 @@ router.get('/events', authMiddleware, async (req: Request, res: Response): Promi
  * GET /api/v1/security/status
  * Get security status
  */
-router.get('/status', authMiddleware, async (_req: Request, res: Response): Promise<void> => {
+router.get('/status', cacheConfigs.short, authMiddleware, async (_req: Request, res: Response): Promise<void> => {
   try {
     const redisService = RedisService.getInstance();
     const redisStatus = await redisService.healthCheck();
@@ -206,7 +207,7 @@ router.get('/status', authMiddleware, async (_req: Request, res: Response): Prom
  * GET /api/v1/security/audit-logs/search
  * Search and filter audit logs
  */
-router.get('/audit-logs/search', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/audit-logs/search', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const {
       startDate,
@@ -337,7 +338,7 @@ router.get('/audit-logs/search', authMiddleware, async (req: Request, res: Respo
  * GET /api/v1/security/audit/health
  * Health check for audit logging system
  */
-router.get('/audit/health', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/audit/health', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins can check audit system health
     if ((req.user as any).userType !== 'super_admin') {

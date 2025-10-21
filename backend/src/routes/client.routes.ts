@@ -8,6 +8,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticateToken, requireClient, auditLog, requirePermission } from '../middleware/auth.middleware';
 import { validateBody, validateParams } from '../middleware/zod.middleware';
+import { cacheConfigs } from '../middleware/cache.middleware';
 import { z } from 'zod';
 import { schemas } from '../utils/zod.schemas';
 import { ValidationUtils } from '../utils/validation.utils';
@@ -373,6 +374,7 @@ const changePasswordSchema = z.object({
  * @access  Client Only
  */
 router.get('/my-profile',
+  cacheConfigs.userSpecific, // Cache user-specific profile for 5 minutes
   authenticateToken,
   requireClient,
   auditLog('profile.view_own', 'User'),
@@ -399,6 +401,7 @@ router.put('/my-profile',
  * @access  Client Only
  */
 router.get('/my-applications',
+  cacheConfigs.userSpecific, // Cache user-specific applications for 5 minutes
   authenticateToken,
   requireClient,
   auditLog('applications.view_own', 'Application'),

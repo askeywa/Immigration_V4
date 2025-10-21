@@ -10,15 +10,11 @@
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
-import DOMPurify from 'dompurify';
-import { 
-  PlusIcon,
-  TrashIcon,
-  XMarkIcon,
-  ExclamationTriangleIcon
-} from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
+import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../stores/auth-store';
 import { SuperAdminService, TenantData, CreateTenantInput } from '../services/super-admin.service';
+import { useToast } from '../contexts/ToastContext';
 import DashboardLayout from '../components/layout/DashboardLayout';
 
 /**
@@ -27,22 +23,19 @@ import DashboardLayout from '../components/layout/DashboardLayout';
 export const SuperAdminDashboard: React.FC = () => {
   // State
   const [tenants, setTenants] = useState<TenantData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
 
   // Hooks
   const { user } = useAuthStore();
+  const { showError } = useToast();
+  const navigate = useNavigate();
 
   /**
    * Load tenants data from API
    */
   const loadTenants = useCallback(async () => {
     try {
-      setIsLoading(true);
-      setError(null);
-      
       // Load real data from API
       const response = await SuperAdminService.getTenants();
       if (response.success && response.data) {
@@ -54,36 +47,12 @@ export const SuperAdminDashboard: React.FC = () => {
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load tenants';
-      setError(errorMessage);
-    } finally {
-      setIsLoading(false);
+      showError('Error Loading Tenants', errorMessage);
+      console.error('Failed to load tenants:', err);
     }
-  }, []);
+  }, [showError]);
 
 
-  /**
-   * Handle delete tenant
-   */
-  const handleDelete = useCallback(async (tenantId: string, tenantName: string) => {
-    if (!window.confirm(`Are you sure you want to delete tenant "${tenantName}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      const response = await SuperAdminService.deleteTenant(tenantId);
-      
-      if (response.success) {
-        // Reload tenants list
-        await loadTenants();
-        alert('Tenant deleted successfully');
-      } else {
-        throw new Error(response.error?.message || 'Failed to delete tenant');
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to delete tenant';
-      alert(`Error: ${errorMessage}`);
-    }
-  }, [loadTenants]);
 
   /**
    * Load data on component mount
@@ -135,164 +104,36 @@ export const SuperAdminDashboard: React.FC = () => {
 
         {/* Main Content */}
         {/* Stats Cards - Professional dashboard style */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="card-metric p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900">{tenants.length}</div>
-            <div className="text-small">Total Tenants</div>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+          <button 
+            onClick={() => navigate('/super-admin/tenants', { state: { activeTab: 'tenants' } })}
+            className="card-metric p-4 sm:p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+          >
+            <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">{tenants.length}</div>
+            <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Total Tenants</div>
+          </button>
 
-          <div className="card-metric p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-50">
-              {tenants.filter(t => t.status === 'active').length}
+          <button 
+            onClick={() => navigate('/super-admin/tenants', { state: { activeTab: 'team-members' } })}
+            className="card-metric p-4 sm:p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+          >
+            <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
+              {tenants.reduce((sum, t) => sum + t.currentTeamMembers, 0)}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Active Tenants</div>
-          </div>
+            <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Team Members</div>
+          </button>
 
-          <div className="card-metric p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-50">
-              {tenants.filter(t => t.plan === 'premium' || t.plan === 'enterprise').length}
+          <button 
+            onClick={() => navigate('/super-admin/tenants', { state: { activeTab: 'end-users' } })}
+            className="card-metric p-4 sm:p-6 text-center hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors cursor-pointer"
+          >
+            <div className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-50">
+              {tenants.reduce((sum, t) => sum + t.currentClients, 0)}
             </div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Premium Plans</div>
-          </div>
-
-          <div className="card-metric p-3 sm:p-4 text-center">
-            <div className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-50">
-              {tenants.reduce((sum, t) => sum + t.currentTeamMembers + t.currentClients, 0)}
-            </div>
-            <div className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">Total Users</div>
-          </div>
+            <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 mt-1">Total Users</div>
+          </button>
         </div>
 
-        {/* Tenants Table */}
-        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden">
-          <div className="px-3 sm:px-4 py-3 border-b border-gray-200 dark:border-gray-700">
-            <h2 className="text-sm sm:text-base font-semibold text-gray-900 dark:text-gray-50">RCIC Tenants</h2>
-          </div>
-
-          {isLoading ? (
-            <div className="p-6 text-center">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary-600 mx-auto"></div>
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">Loading tenants...</p>
-            </div>
-          ) : error ? (
-            <div className="p-6 text-center">
-              <div className="text-red-600 dark:text-red-400">
-                <ExclamationTriangleIcon className="w-8 h-8 mx-auto mb-3" />
-                <p className="text-base font-medium">Error loading tenants</p>
-                <p className="text-sm">{DOMPurify.sanitize(error)}</p>
-                <button
-                  onClick={loadTenants}
-                  className="mt-3 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-                >
-                  Try Again
-                </button>
-              </div>
-            </div>
-          ) : tenants.length === 0 ? (
-            <div className="p-6 text-center">
-              <p className="text-body">No tenants found.</p>
-              <button
-                onClick={() => setShowCreateModal(true)}
-                className="mt-3 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium rounded-lg transition-colors"
-              >
-                Create Your First Tenant
-              </button>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-                  <tr>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Tenant
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hidden sm:table-cell">
-                      Admin
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hidden md:table-cell">
-                      Plan
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
-                      Users
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider hidden lg:table-cell">
-                      Created
-                    </th>
-                    <th className="px-2 sm:px-3 py-2 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-800">
-                  {tenants.map((tenant) => (
-                    <tr key={tenant.id} className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
-                        <div>
-                          <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-gray-50">
-                            {DOMPurify.sanitize(tenant.name)}
-                          </div>
-                          <div className="text-xs text-gray-500 dark:text-gray-400">
-                            {DOMPurify.sanitize(tenant.domain)}
-                          </div>
-                          {/* Show admin info on mobile */}
-                          <div className="text-xs text-gray-500 dark:text-gray-400 sm:hidden">
-                            Admin: {DOMPurify.sanitize(tenant.adminFirstName)} {DOMPurify.sanitize(tenant.adminLastName)}
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden sm:table-cell">
-                        <div className="text-xs sm:text-sm text-gray-900 dark:text-gray-50">
-                          {DOMPurify.sanitize(tenant.adminFirstName)} {DOMPurify.sanitize(tenant.adminLastName)}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {DOMPurify.sanitize(tenant.adminEmail)}
-                        </div>
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap hidden md:table-cell">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                          tenant.plan === 'enterprise' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                          tenant.plan === 'premium' ? 'bg-primary-100 text-primary-800 dark:bg-primary-900/30 dark:text-primary-400' :
-                          tenant.plan === 'basic' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300'
-                        }`}>
-                          {tenant.plan}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        <div>Team: {tenant.currentTeamMembers}/{tenant.maxTeamMembers}</div>
-                        <div>Clients: {tenant.currentClients}/{tenant.maxClients}</div>
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${
-                          tenant.status === 'active' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          tenant.status === 'suspended' ? 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' :
-                          'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400'
-                        }`}>
-                          {tenant.status}
-                        </span>
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400 hidden lg:table-cell">
-                        {new Date(tenant.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-xs sm:text-sm font-medium">
-                        <button 
-                          onClick={() => handleDelete(tenant.id, tenant.name)}
-                          className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300 flex items-center gap-1"
-                        >
-                          <TrashIcon className="h-3 w-3 sm:h-4 sm:w-4" />
-                          <span className="hidden sm:inline">Delete</span>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
       {/* Create Tenant Modal */}
       {showCreateModal && (
         <CreateTenantModal
@@ -329,7 +170,10 @@ const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
   onSuccess,
   setIsCreating
 }) => {
-  const [formData, setFormData] = useState<CreateTenantInput>({
+  const { showSuccess, showError } = useToast();
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+  
+  const initialFormData: CreateTenantInput = {
     name: '',
     domain: '',
     subdomain: '',
@@ -340,42 +184,174 @@ const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
     plan: 'basic',
     maxTeamMembers: 5,
     maxClients: 100
-  });
+  };
+  
+  const [formData, setFormData] = useState<CreateTenantInput>(initialFormData);
+
+  // Password validation: min 8 chars, 1 uppercase, 1 number, 1 special char
+  const validatePassword = (password: string): boolean => {
+    const minLength = password.length >= 8;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasNumber = /\d/.test(password);
+    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+    return minLength && hasUpperCase && hasNumber && hasSpecialChar;
+  };
+
+  // Domain validation: RFC-compliant domain format check
+  const validateDomain = (domain: string): boolean => {
+    // Remove any whitespace and convert to lowercase
+    const cleanDomain = domain.trim().toLowerCase();
+    
+    // Check length (1-253 characters)
+    if (cleanDomain.length < 1 || cleanDomain.length > 253) {
+      return false;
+    }
+    
+    // Check for valid domain format (letters, numbers, dots, hyphens)
+    const domainRegex = /^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?)*\.[a-z]{2,}$/i;
+    return domainRegex.test(cleanDomain);
+  };
+
+  // Subdomain validation: should be a simple string without dots
+  const validateSubdomain = (subdomain: string): boolean => {
+    const cleanSubdomain = subdomain.trim().toLowerCase();
+    
+    // Check length (3-63 characters)
+    if (cleanSubdomain.length < 3 || cleanSubdomain.length > 63) {
+      return false;
+    }
+    
+    // Should not contain dots (that's for domains, not subdomains)
+    if (cleanSubdomain.includes('.')) {
+      return false;
+    }
+    
+    // Should only contain letters, numbers, and hyphens
+    const subdomainRegex = /^[a-z0-9]([a-z0-9\-]{0,61}[a-z0-9])?$/;
+    return subdomainRegex.test(cleanSubdomain);
+  };
+
+  // Form validation
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.adminPassword || !validatePassword(formData.adminPassword)) {
+      errors.adminPassword = 'Password must be at least 8 characters with uppercase, number, and special character';
+    }
+
+    if (!formData.domain || !validateDomain(formData.domain)) {
+      errors.domain = 'Please enter a valid domain (e.g., example.com)';
+    }
+
+    if (!formData.subdomain || !validateSubdomain(formData.subdomain)) {
+      errors.subdomain = 'Subdomain must be 3-63 characters, letters/numbers only (no dots)';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!validateForm()) {
+      showError('Validation Error', 'Please fix the form errors before submitting');
+      return;
+    }
     
     try {
       setIsCreating(true);
       const response = await SuperAdminService.createTenant(formData);
       
+      // Debug log the response
+      console.log('API Response:', response);
+      
       if (response.success) {
-        alert('Tenant created successfully!');
+        showSuccess('Tenant Created Successfully', `Tenant "${formData.name}" has been created successfully`);
+        setFormData(initialFormData); // Reset form
+        setFormErrors({});
         onSuccess();
       } else {
-        throw new Error(response.error?.message || 'Failed to create tenant');
+        console.log('Error response details:', response.error);
+        
+        // Handle detailed validation errors from backend
+        if (response.error?.details && Array.isArray(response.error.details)) {
+          // Backend validation errors - map to form fields
+          const backendErrors: Record<string, string> = {};
+          response.error.details.forEach((detail: any) => {
+            if (detail.field && detail.message) {
+              backendErrors[detail.field] = detail.message;
+            }
+          });
+          console.log('Mapped backend errors:', backendErrors);
+          setFormErrors(backendErrors);
+          showError('Validation Error', 'Please fix the form errors and try again');
+        } else {
+          // Generic error - show more details
+          const errorMessage = response.error?.message || 'Failed to create tenant';
+          console.log('Generic error message:', errorMessage);
+          showError('Failed to Create Tenant', errorMessage);
+        }
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to create tenant';
-      alert(`Error: ${errorMessage}`);
+      console.error('Failed to create tenant:', err);
+      
+      // Log the full error for debugging
+      console.log('Full error object:', err);
+      console.log('Error type:', typeof err);
+      console.log('Error keys:', err instanceof Object ? Object.keys(err) : 'Not an object');
+      
+      // Check if it's a network error with response details
+      if (err instanceof Error && 'response' in err) {
+        const networkError = err as any;
+        console.log('Network error response:', networkError.response);
+        
+        if (networkError.response?.data?.error?.details) {
+          // Handle network validation errors
+          const backendErrors: Record<string, string> = {};
+          networkError.response.data.error.details.forEach((detail: any) => {
+            if (detail.field && detail.message) {
+              backendErrors[detail.field] = detail.message;
+            }
+          });
+          setFormErrors(backendErrors);
+          showError('Validation Error', 'Please fix the form errors and try again');
+        } else {
+          const errorMessage = networkError.response?.data?.error?.message || networkError.message || 'Failed to create tenant';
+          showError('Failed to Create Tenant', errorMessage);
+        }
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'Failed to create tenant';
+        showError('Failed to Create Tenant', errorMessage);
+      }
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleClose = () => {
+    if (!isCreating) {
+      setFormData(initialFormData); // Reset form on close
+      setFormErrors({});
+      onClose();
     }
   };
 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm py-8 px-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm py-8 px-6" role="dialog" aria-modal="true" aria-labelledby="create-tenant-modal-title">
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl p-4 max-w-xl w-full max-h-[85vh] overflow-y-auto border border-gray-200 dark:border-gray-800">
         {/* Modal Header */}
         <div className="flex justify-between items-center mb-2">
-          <h2 className="text-base font-semibold text-gray-900 dark:text-gray-50">
+          <h2 id="create-tenant-modal-title" className="text-base font-semibold text-gray-900 dark:text-gray-50">
             Create New Tenant
           </h2>
           <button
-            onClick={onClose}
-            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+            onClick={handleClose}
+            disabled={isCreating}
+            className="p-1 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Close modal"
           >
             <XMarkIcon className="h-4 w-4" />
           </button>
@@ -406,22 +382,37 @@ const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                 required
                 value={formData.domain}
                 onChange={(e) => setFormData({ ...formData, domain: e.target.value })}
-                className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm"
+                className={`w-full px-2 py-1.5 border rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm ${
+                  formErrors.domain ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
                 placeholder="abcimmigration.com"
+                aria-invalid={!!formErrors.domain}
+                aria-describedby={formErrors.domain ? 'domain-error' : undefined}
               />
+              {formErrors.domain && (
+                <p id="domain-error" className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.domain}</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Subdomain
+                Subdomain *
               </label>
               <input
                 type="text"
+                required
                 value={formData.subdomain}
                 onChange={(e) => setFormData({ ...formData, subdomain: e.target.value })}
-                className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm"
-                placeholder="abc"
+                className={`w-full px-2 py-1.5 border rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm ${
+                  formErrors.subdomain ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="abc (no dots)"
+                aria-invalid={!!formErrors.subdomain}
+                aria-describedby={formErrors.subdomain ? 'subdomain-error' : undefined}
               />
+              {formErrors.subdomain && (
+                <p id="subdomain-error" className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.subdomain}</p>
+              )}
             </div>
 
             <div>
@@ -473,9 +464,16 @@ const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
                 required
                 value={formData.adminPassword}
                 onChange={(e) => setFormData({ ...formData, adminPassword: e.target.value })}
-                className="w-full px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm"
-                placeholder="Min 8 characters"
+                className={`w-full px-2 py-1.5 border rounded-md focus:ring-2 focus:ring-primary-500 dark:bg-gray-800 dark:text-white transition-colors text-sm ${
+                  formErrors.adminPassword ? 'border-red-500 dark:border-red-500' : 'border-gray-300 dark:border-gray-600'
+                }`}
+                placeholder="Min 8 chars, 1 uppercase, 1 number, 1 special char"
+                aria-invalid={!!formErrors.adminPassword}
+                aria-describedby={formErrors.adminPassword ? 'password-error' : undefined}
               />
+              {formErrors.adminPassword && (
+                <p id="password-error" className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.adminPassword}</p>
+              )}
             </div>
 
             <div>
@@ -526,9 +524,9 @@ const CreateTenantModal: React.FC<CreateTenantModalProps> = ({
           <div className="flex justify-end gap-2 mt-3">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               disabled={isCreating}
-              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 text-sm font-medium"
+              className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
             >
               Cancel
             </button>

@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { cacheConfigs } from '../middleware/cache.middleware';
 import PerformanceMonitoringService from '../services/performance-monitoring.service';
 import RedisService from '../services/redis.service';
 import logger from '../utils/logger';
@@ -15,7 +16,7 @@ const router = Router();
  * GET /api/v1/monitoring/performance
  * Get performance statistics
  */
-router.get('/performance', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/performance', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins and Tenant Admins can view performance stats
     const userType = (req.user as any).userType;
@@ -57,7 +58,7 @@ router.get('/performance', authMiddleware, async (req: Request, res: Response): 
  * GET /api/v1/monitoring/slow-requests
  * Get slow requests
  */
-router.get('/slow-requests', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/slow-requests', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins can view slow requests
     if ((req.user as any).userType !== 'super_admin') {
@@ -101,7 +102,7 @@ router.get('/slow-requests', authMiddleware, async (req: Request, res: Response)
  * GET /api/v1/monitoring/endpoint/:endpoint
  * Get endpoint-specific statistics
  */
-router.get('/endpoint/:endpoint', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/endpoint/:endpoint', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins can view endpoint stats
     if ((req.user as any).userType !== 'super_admin') {
@@ -142,7 +143,7 @@ router.get('/endpoint/:endpoint', authMiddleware, async (req: Request, res: Resp
  * GET /api/v1/monitoring/health
  * Comprehensive health check
  */
-router.get('/health', async (_req: Request, res: Response): Promise<void> => {
+router.get('/health', cacheConfigs.short, async (_req: Request, res: Response): Promise<void> => {
   try {
     const redisService = RedisService.getInstance();
     const redisHealth = await redisService.healthCheck();

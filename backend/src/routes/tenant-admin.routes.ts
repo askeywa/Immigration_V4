@@ -9,6 +9,7 @@ import { Router } from 'express';
 import { authenticateToken, requireTenantAdmin, auditLog } from '../middleware/auth.middleware';
 import { checkResourceOwnership, enforceTenantIsolation } from '../middleware/authorization.middleware';
 import { validate } from '../middleware/zod.middleware';
+import { cacheConfigs, createCacheInvalidationMiddleware } from '../middleware/cache.middleware';
 import { TenantAdminController } from '../features/tenant-admin/tenant-admin.controller';
 import {
   createTeamMemberSchema,
@@ -31,6 +32,7 @@ const router = Router();
  * @access  Tenant Admin Only
  */
 router.get('/team-members',
+  cacheConfigs.tenantSpecific, // Cache tenant-specific team members for 5 minutes
   authenticateToken,
   requireTenantAdmin,
   enforceTenantIsolation(),
@@ -44,6 +46,7 @@ router.get('/team-members',
  * @access  Tenant Admin Only
  */
 router.post('/team-members',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant-admin/team-members*']), // Invalidate team member caches
   authenticateToken,
   requireTenantAdmin,
   validate(createTeamMemberSchema),
@@ -57,6 +60,7 @@ router.post('/team-members',
  * @access  Tenant Admin Only
  */
 router.put('/team-members/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant-admin/team-members*']), // Invalidate team member caches
   authenticateToken,
   requireTenantAdmin,
   checkResourceOwnership('team_member'),
@@ -71,6 +75,7 @@ router.put('/team-members/:id',
  * @access  Tenant Admin Only
  */
 router.delete('/team-members/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant-admin/team-members*']), // Invalidate team member caches
   authenticateToken,
   requireTenantAdmin,
   checkResourceOwnership('team_member'),
@@ -85,6 +90,7 @@ router.delete('/team-members/:id',
  * @access  Tenant Admin Only
  */
 router.get('/clients',
+  cacheConfigs.tenantSpecific, // Cache tenant-specific clients for 5 minutes
   authenticateToken,
   requireTenantAdmin,
   enforceTenantIsolation(),
@@ -98,6 +104,7 @@ router.get('/clients',
  * @access  Tenant Admin Only
  */
 router.post('/clients',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/tenant-admin/clients*']), // Invalidate client caches
   authenticateToken,
   requireTenantAdmin,
   validate(createClientSchema),
@@ -111,6 +118,7 @@ router.post('/clients',
  * @access  Tenant Admin Only
  */
 router.get('/analytics',
+  cacheConfigs.short, // Cache analytics for 1 minute (frequently changing data)
   authenticateToken,
   requireTenantAdmin,
   auditLog('analytics.view_tenant', 'Analytics'),

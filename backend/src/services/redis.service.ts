@@ -185,6 +185,51 @@ class RedisService {
   }
 
   /**
+   * Delete keys matching a pattern
+   */
+  public async delPattern(pattern: string): Promise<number> {
+    try {
+      if (this.isConnected && this.client) {
+        const keys = await this.client.keys(pattern);
+        if (keys.length === 0) return 0;
+        
+        const result = await this.client.del(...keys);
+        logger.debug('Deleted cache keys', { pattern, count: result });
+        return result;
+      } else {
+        // In-memory fallback - delete matching keys
+        let deletedCount = 0;
+        for (const key of this.memoryStore.keys()) {
+          if (this.matchPattern(key, pattern)) {
+            this.memoryStore.delete(key);
+            deletedCount++;
+          }
+        }
+        logger.debug('Deleted cache keys (memory)', { pattern, count: deletedCount });
+        return deletedCount;
+      }
+    } catch (error) {
+      logger.error('Redis DEL pattern error', {
+        pattern,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return 0;
+    }
+  }
+
+  /**
+   * Simple pattern matching for in-memory fallback
+   */
+  private matchPattern(key: string, pattern: string): boolean {
+    // Convert Redis pattern to regex
+    const regexPattern = pattern
+      .replace(/\*/g, '.*')
+      .replace(/\?/g, '.');
+    const regex = new RegExp(`^${regexPattern}$`);
+    return regex.test(key);
+  }
+
+  /**
    * Check if a key exists
    */
   public async exists(key: string): Promise<boolean> {

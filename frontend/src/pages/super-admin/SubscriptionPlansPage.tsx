@@ -24,6 +24,8 @@ const SubscriptionPlansPage: React.FC = () => {
   
   // Timer ref for message auto-dismiss cleanup
   const messageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // Track if component is mounted to prevent state updates after unmount
+  const isMountedRef = useRef(true);
   
   // State
   const [plans, setPlans] = useState<SubscriptionPlanData[]>([]);
@@ -69,16 +71,24 @@ const SubscriptionPlansPage: React.FC = () => {
     loadPlans();
   }, [loadPlans]);
 
-  // Cleanup timer on unmount
+  // Reset pagination to page 1 when search or filter changes
+  useEffect(() => {
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
+  }, [searchQuery, filterStatus]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Cleanup timer and set mounted status on unmount
   useEffect(() => {
     return () => {
+      isMountedRef.current = false;
       if (messageTimeoutRef.current) {
         clearTimeout(messageTimeoutRef.current);
       }
     };
   }, []);
 
-  // Show message with proper timer cleanup
+  // Show message with proper timer cleanup and race condition fix
   const showMessage = (type: 'success' | 'error', text: string) => {
     // Clear any existing timer
     if (messageTimeoutRef.current) {
@@ -87,10 +97,12 @@ const SubscriptionPlansPage: React.FC = () => {
 
     setMessage({ type, text });
 
-    // Set new timer
+    // Set new timer with mounted check to prevent state updates after unmount
     messageTimeoutRef.current = setTimeout(() => {
-      setMessage(null);
-      messageTimeoutRef.current = null;
+      if (isMountedRef.current) {
+        setMessage(null);
+        messageTimeoutRef.current = null;
+      }
     }, 5000);
   };
 
@@ -108,21 +120,32 @@ const SubscriptionPlansPage: React.FC = () => {
 
 
   // Handle toggle status
+  // Toggle plan status with optimistic UI
   const handleToggleStatus = async (plan: SubscriptionPlanData) => {
+    const newStatus = plan.status === 'active' ? 'inactive' : 'active';
+    
+    // Optimistic update: Update UI immediately
+    setPlans(prev => prev.map(p => 
+      p.id === plan.id ? { ...p, status: newStatus } : p
+    ));
+    
     try {
-      setLoading(true);
-      const newStatus = plan.status === 'active' ? 'inactive' : 'active';
       const response = await SubscriptionPlanService.updatePlanStatus(plan.id, newStatus);
       if (response.success) {
         showMessage('success', `Plan ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully`);
-        await loadPlans();
       } else {
+        // Revert on error
+        setPlans(prev => prev.map(p => 
+          p.id === plan.id ? { ...p, status: plan.status } : p
+        ));
         showMessage('error', response.error?.message || 'Failed to update status');
       }
     } catch (error) {
+      // Revert on error
+      setPlans(prev => prev.map(p => 
+        p.id === plan.id ? { ...p, status: plan.status } : p
+      ));
       showMessage('error', 'Failed to update plan status');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -142,6 +165,29 @@ const SubscriptionPlansPage: React.FC = () => {
   const handleModalSuccess = async () => {
     showMessage('success', 'Operation completed successfully');
     await loadPlans();
+  };
+
+  // Delete plan handler
+  const handleDeleteConfirm = async () => {
+    if (!selectedPlan) return;
+    
+    try {
+      setLoading(true);
+      const response = await SubscriptionPlanService.deletePlan(selectedPlan.id);
+      
+      if (response.success) {
+        showMessage('success', 'Plan deleted successfully');
+        setShowDeleteConfirm(false);
+        setSelectedPlan(null);
+        await loadPlans();
+      } else {
+        showMessage('error', response.error?.message || 'Failed to delete plan');
+      }
+    } catch (error) {
+      showMessage('error', 'Failed to delete plan');
+    } finally {
+      setLoading(false);
+    }
   };
 
 
@@ -313,6 +359,7 @@ const SubscriptionPlansPage: React.FC = () => {
                   <div className="flex gap-1">
                     <button
                       onClick={() => handleToggleStatus(plan)}
+                      aria-label={`${plan.status === 'active' ? 'Deactivate' : 'Activate'} ${plan.name}`}
                       className="flex-1 inline-flex justify-center items-center px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       {plan.status === 'active' ? (
@@ -323,6 +370,7 @@ const SubscriptionPlansPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() => openEditModal(plan)}
+                      aria-label={`Edit ${plan.name}`}
                       className="flex-1 inline-flex justify-center items-center px-2 py-1.5 border border-transparent rounded text-xs font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                     >
                       <PencilIcon className="h-3 w-3" />
@@ -330,6 +378,8 @@ const SubscriptionPlansPage: React.FC = () => {
                     <button
                       onClick={() => openDeleteConfirm(plan)}
                       disabled={plan.tenantsUsingPlan > 0}
+                      aria-label={`Delete ${plan.name}`}
+                      title={plan.tenantsUsingPlan > 0 ? `Cannot delete: ${plan.tenantsUsingPlan} tenant(s) using this plan` : undefined}
                       className="flex-1 inline-flex justify-center items-center px-2 py-1.5 border border-transparent rounded text-xs font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-1 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <TrashIcon className="h-3 w-3" />
@@ -400,6 +450,8 @@ const SubscriptionPlansPage: React.FC = () => {
                       <button
                         key={pageNum}
                         onClick={() => setCurrentPage(pageNum)}
+                        aria-current={currentPage === pageNum ? 'page' : undefined}
+                        aria-label={`Go to page ${pageNum}`}
                         className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
                           currentPage === pageNum
                             ? 'z-10 bg-blue-600 text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600'
@@ -445,8 +497,12 @@ const SubscriptionPlansPage: React.FC = () => {
             <DeleteConfirmModal
               isOpen={showDeleteConfirm}
               onClose={() => setShowDeleteConfirm(false)}
-              onSuccess={handleModalSuccess}
-              plan={selectedPlan}
+              onConfirm={handleDeleteConfirm}
+              title="Delete Subscription Plan"
+              message={`Are you sure you want to delete the subscription plan "${selectedPlan?.name}"?`}
+              itemName={selectedPlan?.name || ''}
+              itemType="subscription plan"
+              isDeleting={loading}
             />
           </div>
         </div>

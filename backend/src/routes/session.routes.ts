@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { authMiddleware } from '../middleware/auth.middleware';
+import { cacheConfigs, createCacheInvalidationMiddleware } from '../middleware/cache.middleware';
 import SessionService from '../services/session.service';
 import logger from '../utils/logger';
 
@@ -14,7 +15,7 @@ const router = Router();
  * GET /api/v1/sessions
  * Get active sessions for the current user
  */
-router.get('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/', cacheConfigs.userSpecific, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req.user as any).id;
     const sessionService = SessionService.getInstance();
@@ -47,7 +48,7 @@ router.get('/', authMiddleware, async (req: Request, res: Response): Promise<voi
  * DELETE /api/v1/sessions
  * Terminate all sessions for the current user
  */
-router.delete('/', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.delete('/', createCacheInvalidationMiddleware(['cache:GET:/api/v1/sessions*']), authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     const userId = (req.user as any).id;
     const sessionService = SessionService.getInstance();
@@ -79,7 +80,7 @@ router.delete('/', authMiddleware, async (req: Request, res: Response): Promise<
  * GET /api/v1/sessions/stats
  * Get session statistics (admin only)
  */
-router.get('/stats', authMiddleware, async (req: Request, res: Response): Promise<void> => {
+router.get('/stats', cacheConfigs.short, authMiddleware, async (req: Request, res: Response): Promise<void> => {
   try {
     // Only Super Admins can view session stats
     if ((req.user as any).userType !== 'super_admin') {

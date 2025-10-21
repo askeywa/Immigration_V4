@@ -8,6 +8,7 @@
 import { Router } from 'express';
 import { authenticateToken, requireSuperAdmin, auditLog } from '../middleware/auth.middleware';
 import { validate } from '../middleware/zod.middleware';
+import { cacheConfigs, createCacheInvalidationMiddleware } from '../middleware/cache.middleware';
 import { SuperAdminController } from '../features/super-admin/super-admin.controller';
 import {
   createTenantSchema,
@@ -45,6 +46,7 @@ const router = Router();
  * @access  Super Admin Only
  */
 router.get('/tenants',
+  cacheConfigs.medium, // Cache for 5 minutes
   authenticateToken,
   requireSuperAdmin,
   auditLog('tenants.list', 'Tenant'),
@@ -57,6 +59,7 @@ router.get('/tenants',
  * @access  Super Admin Only
  */
 router.get('/tenants/:id',
+  cacheConfigs.medium, // Cache for 5 minutes
   authenticateToken,
   requireSuperAdmin,
   validate(getTenantSchema),
@@ -70,6 +73,7 @@ router.get('/tenants/:id',
  * @access  Super Admin Only
  */
 router.post('/tenants',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/tenants*']), // Invalidate tenant list cache
   authenticateToken,
   requireSuperAdmin,
   validate(createTenantSchema),
@@ -83,6 +87,7 @@ router.post('/tenants',
  * @access  Super Admin Only
  */
 router.put('/tenants/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/tenants*']), // Invalidate tenant caches
   authenticateToken,
   requireSuperAdmin,
   validate(updateTenantSchema),
@@ -96,6 +101,7 @@ router.put('/tenants/:id',
  * @access  Super Admin Only
  */
 router.delete('/tenants/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/tenants*']), // Invalidate tenant caches
   authenticateToken,
   requireSuperAdmin,
   validate(deleteTenantSchema),
@@ -109,6 +115,7 @@ router.delete('/tenants/:id',
  * @access  Super Admin Only
  */
 router.get('/analytics',
+  cacheConfigs.short, // Cache for 1 minute (analytics change frequently)
   authenticateToken,
   requireSuperAdmin,
   auditLog('analytics.view', 'System'),
@@ -121,6 +128,7 @@ router.get('/analytics',
  * @access  Super Admin Only
  */
 router.get('/system-health',
+  cacheConfigs.short, // Cache for 1 minute (health data changes frequently)
   authenticateToken,
   requireSuperAdmin,
   auditLog('system.health', 'System'),
@@ -139,6 +147,7 @@ router.get('/system-health',
  * @access  Super Admin Only
  */
 router.get('/subscription-plans',
+  cacheConfigs.long, // Cache for 30 minutes (plans rarely change)
   subscriptionPlanReadLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -153,6 +162,7 @@ router.get('/subscription-plans',
  * @access  Super Admin Only
  */
 router.get('/subscription-plans/active',
+  cacheConfigs.long, // Cache for 30 minutes (active plans rarely change)
   subscriptionPlanReadLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -167,6 +177,7 @@ router.get('/subscription-plans/active',
  * @access  Super Admin Only
  */
 router.put('/subscription-plans/reorder',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/subscription-plans*']), // Invalidate plan caches
   subscriptionPlanReorderLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -181,6 +192,7 @@ router.put('/subscription-plans/reorder',
  * @access  Super Admin Only
  */
 router.post('/subscription-plans',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/subscription-plans*']), // Invalidate plan caches
   subscriptionPlanWriteLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -195,6 +207,7 @@ router.post('/subscription-plans',
  * @access  Super Admin Only
  */
 router.patch('/subscription-plans/:id/status',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/subscription-plans*']), // Invalidate plan caches
   subscriptionPlanWriteLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -209,6 +222,7 @@ router.patch('/subscription-plans/:id/status',
  * @access  Super Admin Only
  */
 router.get('/subscription-plans/:id',
+  cacheConfigs.long, // Cache for 30 minutes (individual plans rarely change)
   subscriptionPlanReadLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -223,6 +237,7 @@ router.get('/subscription-plans/:id',
  * @access  Super Admin Only
  */
 router.put('/subscription-plans/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/subscription-plans*']), // Invalidate plan caches
   subscriptionPlanWriteLimiter,
   authenticateToken,
   requireSuperAdmin,
@@ -237,6 +252,7 @@ router.put('/subscription-plans/:id',
  * @access  Super Admin Only
  */
 router.delete('/subscription-plans/:id',
+  createCacheInvalidationMiddleware(['cache:GET:/api/v1/super-admin/subscription-plans*']), // Invalidate plan caches
   subscriptionPlanWriteLimiter,
   authenticateToken,
   requireSuperAdmin,

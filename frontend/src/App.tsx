@@ -13,6 +13,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { ToastProvider } from './contexts/ToastContext';
 import { useTenantBranding } from './hooks/useTenantBranding';
 import { useSessionTracker } from './hooks/useSessionTracker';
 import { LandingPage } from './pages/LandingPage';
@@ -91,12 +92,13 @@ const App: React.FC = () => {
   return (
     <ErrorBoundary>
       <ThemeProvider>
-        <BrowserRouter
-          future={{
-            v7_startTransition: true,
-            v7_relativeSplatPath: true
-          }}
-        >
+        <ToastProvider>
+          <BrowserRouter
+            future={{
+              v7_startTransition: true,
+              v7_relativeSplatPath: true
+            }}
+          >
           <Routes>
             {/* Public Routes */}
             <Route path="/" element={<LandingPage />} />
@@ -317,7 +319,8 @@ const App: React.FC = () => {
             {/* Catch all - redirect to home */}
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
-        </BrowserRouter>
+          </BrowserRouter>
+        </ToastProvider>
       </ThemeProvider>
     </ErrorBoundary>
   );
